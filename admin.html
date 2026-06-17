@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <meta name="description" content="BGBAZAAR Admin Portal - Manage products, categories, orders, inventory, and payments for your campus marketplace.">
+    <meta name="theme-color" content="#0066cc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BGBAZAAR | Admin Portal</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="BGBAZAAR home">
+        <img id="siteLogo" alt="BGBAZAAR logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E">
+        <span id="siteName">BGBAZAAR</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="index.html">Browse</a>
+        <a href="cart.html">Cart <span id="navCartCount">0</span></a>
+        <a href="checkout.html">Checkout</a>
+        <a href="admin.html" aria-current="page">Admin Portal</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero" style="background: linear-gradient(135deg, rgba(26, 40, 71, 0.95), rgba(0, 102, 204, 0.85)), url('https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1400&q=80') center/cover;">
+        <p class="eyebrow">Admin Control Center</p>
+        <h1>Marketplace Management Portal</h1>
+        <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Manage products, categories, orders, payments, and settings from one dashboard.</p>
+      </section>
+      </section>
+
+      <section class="section admin-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Administrative Access</p>
+            <h2>Control Center</h2>
+          </div>
+          <button id="logoutBtn" class="ghost-btn hidden" type="button">Logout</button>
+        </div>
+
+        <form id="loginForm" class="login-panel" style="max-width: 400px;">
+          <h3 style="margin-top: 0;">Admin Portal Access</h3>
+          <p class="muted" style="margin-bottom: 20px; font-size: 13px;">Enter your credentials to access the management dashboard. Demo: <strong>admin / admin123</strong></p>
+          <label style="display: block; margin-bottom: 16px;">
+            <span style="display: block; font-weight: 600; margin-bottom: 6px;">Username</span>
+            <input name="username" type="text" autocomplete="username" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+          </label>
+          <label style="display: block; margin-bottom: 20px;">
+            <span style="display: block; font-weight: 600; margin-bottom: 6px;">Password</span>
+            <input name="password" type="password" autocomplete="current-password" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+          </label>
+          <button class="primary-btn" type="submit" style="width: 100%;">Access Dashboard</button>
+          <p id="loginMessage" class="message error" role="status"></p>
+        </form>
+
+        <div id="adminDashboard" class="hidden">
+          <div style="margin-bottom: 30px;">
+            <h3 style="margin-bottom: 20px;">Dashboard Overview</h3>
+            <div class="dashboard-grid" style="gap: 16px;">
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="totalProductsDash" style="font-size: 28px; font-weight: 700; color: var(--brand); display: block;">0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Total Products</p>
+              </div>
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="activeProductsDash" style="font-size: 28px; font-weight: 700; color: #10b981; display: block;">0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Active Products</p>
+              </div>
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="unlistedProductsDash" style="font-size: 28px; font-weight: 700; color: #f97316; display: block;">0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Unlisted Products</p>
+              </div>
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="totalOrdersDash" style="font-size: 28px; font-weight: 700; color: var(--brand); display: block;">0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Total Orders</p>
+              </div>
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="pendingOrdersDash" style="font-size: 28px; font-weight: 700; color: #f97316; display: block;">0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Pending Orders</p>
+              </div>
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="completedOrdersDash" style="font-size: 28px; font-weight: 700; color: #10b981; display: block;">0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Completed Orders</p>
+              </div>
+              <div style="padding: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; text-align: center;">
+                <span id="revenueDash" style="font-size: 28px; font-weight: 700; color: #10b981; display: block;">Rs. 0</span>
+                <p style="margin: 8px 0 0; color: var(--muted); font-size: 13px;">Total Revenue</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="lowStockAlerts" class="alerts" aria-live="polite"></div>
+
+          <div class="admin-tabs" aria-label="Admin sections" style="margin: 30px 0; border-bottom: 2px solid var(--line); display: flex; gap: 4px; overflow-x: auto; padding-bottom: 0;">
+            <a href="#paymentSetup" style="padding: 12px 16px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;">Payment Setup</a>
+            <a href="#settingsSetup" style="padding: 12px 16px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;">Settings</a>
+            <a href="#categorySetup" style="padding: 12px 16px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;">Categories</a>
+            <a href="#productSetup" style="padding: 12px 16px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;">Products</a>
+            <a href="#inventoryDash" style="padding: 12px 16px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;">Inventory</a>
+            <a href="#orderHistory" style="padding: 12px 16px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;">Orders</a>
+          </div>
+
+          <div class="admin-layout">
+            <form id="brandingForm" class="admin-form">
+              <h3 id="paymentSetup">Branding & Payment</h3>
+              <label>
+                Website Name
+                <input name="siteName" type="text" placeholder="BGBAZAAR" required>
+              </label>
+              <label>
+                Logo Image URL
+                <input name="logoUrl" type="url" placeholder="https://example.com/logo.png">
+              </label>
+              <label>
+                Contact Number
+                <input name="contactPhone" type="tel" placeholder="+91 XXXXX XXXXX">
+              </label>
+              <label>
+                Contact Email
+                <input name="contactEmail" type="email" placeholder="contact@bgbazaar.com">
+              </label>
+              <button class="primary-btn" type="submit">Save Branding</button>
+            </form>
+
+            <form id="settingsForm" class="admin-form">
+              <h3 id="settingsSetup">Website Settings</h3>
+              <label>
+                UPI ID
+                <input name="upiId" type="text" placeholder="payments@bgbazaar" required>
+              </label>
+              <label>
+                Payment QR Code
+                <input name="qrImage" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+              </label>
+              <div class="qr-preview-box">
+                <img id="adminQrPreview" alt="Current payment QR code">
+              </div>
+              <label>
+                Bank Details
+                <textarea name="bankDetails" placeholder="Bank name, account holder, account number, IFSC, branch"></textarea>
+              </label>
+              <button class="primary-btn" type="submit">Save Payment Settings</button>
+            </form>
+
+            <form id="categoryForm" class="admin-form">
+              <h3 id="categorySetup">Manage Categories</h3>
+              <input type="hidden" name="categoryId">
+              <label>
+                Category Name
+                <input name="categoryName" type="text" placeholder="e.g., Electronics, Fashion, Home" required>
+              </label>
+              <label>
+                Category Description
+                <textarea name="categoryDescription" placeholder="Brief description of this category"></textarea>
+              </label>
+              <div class="form-actions">
+                <button class="primary-btn" type="submit" id="saveCategoryBtn">Add Category</button>
+                <button id="resetCategoryBtn" class="ghost-btn" type="button">Reset</button>
+              </div>
+            </form>
+
+            <div class="admin-form" style="background: var(--bg); padding: 0;">
+              <h4 style="padding: 18px 18px 0; margin-bottom: 12px;">Active Categories</h4>
+              <div id="categoriesList" style="padding: 0 18px 18px;"></div>
+            </div>
+
+            <form id="productForm" class="admin-form">
+              <h3 id="productSetup">Add / Edit Product</h3>
+              <input type="hidden" name="id">
+              <label>
+                Product Name
+                <input name="name" type="text" required>
+              </label>
+              <label>
+                Description
+                <textarea name="description" required></textarea>
+              </label>
+              <label>
+                Category
+                <input name="category" type="text" required>
+              </label>
+              <label>
+                Image URL
+                <input name="image" type="url">
+              </label>
+              <div class="form-row">
+                <label>
+                  Price (Rs.)
+                  <input name="price" type="number" min="1" step="1" required>
+                </label>
+                <label>
+                  Stock Quantity
+                  <input name="totalStock" type="number" min="0" step="1" required>
+                </label>
+              </div>
+              <label class="inline-check">
+                <input name="listed" type="checkbox" checked>
+                <span>Show to Customers</span>
+              </label>
+              <div class="form-actions">
+                <button class="primary-btn" type="submit">Save Product</button>
+                <button id="resetFormBtn" class="ghost-btn" type="button">Reset</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="inventoryDash" class="management-grid">
+            <section>
+              <h3>Inventory Status</h3>
+              <div id="inventoryTable" class="table-wrap" aria-live="polite"></div>
+            </section>
+            <section>
+              <h3>Revenue Report</h3>
+              <div id="revenueTable" class="table-wrap" aria-live="polite"></div>
+            </section>
+          </div>
+
+          <section class="admin-block">
+            <h3>Your Products</h3>
+            <div id="adminList" class="admin-list" aria-live="polite"></div>
+          </section>
+
+          <section id="orderHistory" class="admin-block">
+            <h3>Orders & Payments</h3>
+            <div id="ordersList" class="orders-list" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

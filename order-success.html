@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <meta name="description" content="BGBAZAAR Order Confirmation - Your order has been submitted. Track status and next steps.">
+    <meta name="theme-color" content="#0066cc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BGBAZAAR | Order Confirmation</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="BGBAZAAR home">
+        <img id="siteLogo" alt="BGBAZAAR logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E">
+        <span id="siteName">BGBAZAAR</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="index.html">Browse</a>
+        <a href="cart.html">Cart <span id="navCartCount">0</span></a>
+        <a href="checkout.html">Checkout</a>
+        <a href="admin.html">Admin Portal</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.85)), url('https://images.unsplash.com/photo-1551699784-e91953dec042?auto=format&fit=crop&w=1400&q=80') center/cover;">
+        <p class="eyebrow">Order Confirmation</p>
+        <h1>Thank You for Your Order!</h1>
+        <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Your order has been submitted successfully. Here are your order details and what happens next.</p>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Order Details</p>
+            <h2>Order Placed Successfully</h2>
+          </div>
+        </div>
+
+        <div id="orderSuccessContent" style="display: grid; gap: 24px;">
+          <div style="padding: 24px; background: var(--brand-light); border: 2px solid var(--brand); border-radius: 8px; text-align: center;">
+            <p style="margin-top: 0; color: var(--brand); font-weight: 700; font-size: 14px;">ORDER REFERENCE NUMBER</p>
+            <h3 id="successOrderNumber" style="margin: 8px 0 0; color: var(--brand); font-size: 24px; letter-spacing: 1px;">-</h3>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="padding: 16px; border: 1px solid var(--line); border-radius: 8px;">
+              <h4 style="margin-top: 0; color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 700;">Delivery Address</h4>
+              <p id="successAddress" style="margin: 0; line-height: 1.6;">-</p>
+            </div>
+            <div style="padding: 16px; border: 1px solid var(--line); border-radius: 8px;">
+              <h4 style="margin-top: 0; color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 700;">Contact Information</h4>
+              <p style="margin: 0 0 8px 0; font-size: 14px;"><strong id="successName">-</strong></p>
+              <p style="margin: 0; font-size: 14px;" id="successMobile">-</p>
+              <p style="margin: 0; font-size: 14px;" id="successEmail">-</p>
+            </div>
+          </div>
+
+          <div style="padding: 16px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;">
+            <h4 style="margin-top: 0; color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 700;">Order Items</h4>
+            <div id="successItems" style="display: grid; gap: 12px;"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;">
+            <div>
+              <p style="margin: 0; color: var(--muted); font-size: 13px;">Order Total</p>
+              <p id="successTotal" style="margin: 8px 0 0 0; font-size: 24px; color: var(--brand); font-weight: 700;">-</p>
+            </div>
+            <div>
+              <p style="margin: 0; color: var(--muted); font-size: 13px;">Order Status</p>
+              <p id="successStatus" style="margin: 8px 0 0 0; font-size: 18px; font-weight: 700;">-</p>
+            </div>
+          </div>
+
+          <div style="padding: 16px; background: #fffbeb; border-left: 4px solid var(--accent); border-radius: 4px;">
+            <h4 style="margin-top: 0; color: #92400e; font-size: 14px; font-weight: 700;">What Happens Next?</h4>
+            <ol style="margin: 0; padding: 0 0 0 20px; color: #92400e; font-size: 14px; line-height: 1.8;">
+              <li>Our admin will verify your payment screenshot</li>
+              <li>Once approved, your order will be confirmed</li>
+              <li>We'll update you on the delivery status</li>
+              <li>Track your order anytime on this website</li>
+            </ol>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <a class="primary-link" href="index.html" style="text-align: center;">Continue Shopping</a>
+            <a class="secondary-link light" href="#" id="printOrderBtn" style="text-align: center;">Print Order</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+      function displayOrderSuccess() {
+        const lastOrder = orders[orders.length - 1];
+        if (!lastOrder) {
+          document.getElementById('orderSuccessContent').innerHTML = '<div class="empty">No order found. <a href="checkout.html">Return to checkout</a></div>';
+          return;
+        }
+
+        document.getElementById('successOrderNumber').textContent = lastOrder.orderNumber;
+        document.getElementById('successName').textContent = lastOrder.buyerName;
+        document.getElementById('successMobile').textContent = 'Mobile: ' + lastOrder.mobileNumber;
+        document.getElementById('successEmail').textContent = 'Email: ' + lastOrder.emailAddress;
+        document.getElementById('successAddress').textContent = lastOrder.deliveryLocation;
+        document.getElementById('successTotal').textContent = money(orderTotal(lastOrder));
+        document.getElementById('successStatus').textContent = lastOrder.status;
+
+        const itemsHtml = lastOrder.items.map(item => `
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px; background: #fff; border-radius: 6px;">
+            <div>
+              <p style="margin: 0; font-weight: 600;">${escapeHtml(item.name)}</p>
+              <p style="margin: 4px 0 0; color: var(--muted); font-size: 13px;">Qty: ${item.quantity} × ${money(item.unitPrice)}</p>
+            </div>
+            <p style="margin: 0; font-weight: 700; color: var(--brand);">${money(item.subtotal)}</p>
+          </div>
+        `).join('');
+        document.getElementById('successItems').innerHTML = itemsHtml;
+
+        document.getElementById('printOrderBtn').addEventListener('click', () => window.print());
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', displayOrderSuccess);
+      } else {
+        displayOrderSuccess();
+      }
+    </script>
+  </body>
+</html>
