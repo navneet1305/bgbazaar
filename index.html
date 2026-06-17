@@ -18,7 +18,6 @@
       </a>
       <nav aria-label="Main navigation">
         <a href="index.html" aria-current="page">Home</a>
-        <a href="index.html">Browse</a>
         <a href="cart.html">Cart <span id="navCartCount">0</span></a>
         <a href="checkout.html">Checkout</a>
         <a href="admin.html">Admin Portal</a>
@@ -26,19 +25,20 @@
     </header>
 
     <main>
-      <section class="section" id="products" style="padding-top: 30px;">
-        <div style="margin-bottom: 30px; padding: 20px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid var(--brand);">
-          <h2 style="margin: 0 0 8px 0; font-size: 28px; color: var(--brand);">Shop at BGBAZAAR</h2>
-          <p style="margin: 0; color: #333; font-size: 14px; line-height: 1.5;">Find everything you need at unbeatable prices. Quick checkout, multiple payment options, and reliable delivery to your doorstep.</p>
+      <section class="section shop-section" id="products">
+        <div class="shop-intro">
+          <p class="eyebrow">Campus Marketplace</p>
+          <h1>Shop at BGBAZAAR</h1>
+          <p>Find everyday essentials at fair prices with quick checkout and reliable campus delivery.</p>
         </div>
 
         <div class="filters" aria-label="Product filters">
           <label>
-            <span style="font-weight: 600; color: #333; display: block; margin-bottom: 6px;">Search</span>
+            <span>Search</span>
             <input id="searchInput" type="search" placeholder="Find products by name...">
           </label>
           <label>
-            <span style="font-weight: 600; color: #333; display: block; margin-bottom: 6px;">Filter by Category</span>
+            <span>Filter by Category</span>
             <select id="categoryFilter"></select>
           </label>
         </div>
@@ -47,31 +47,27 @@
       </section>
     </main>
 
-    <footer style="background: #1a2847; color: #fff; padding: 40px max(18px, 5vw); margin-top: 50px; border-top: 2px solid var(--brand);">
-      <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; margin-bottom: 30px;">
+    <footer class="site-footer">
+      <div class="footer-grid">
         <div>
-          <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; font-weight: 700; color: var(--brand);">BGBAZAAR</h4>
-          <p style="margin: 0; font-size: 14px; line-height: 1.6; opacity: 0.9;">The official campus marketplace for students and faculty. Quality products, secure payments, and fast delivery right to your dorm or office.</p>
+          <h4>BGBAZAAR</h4>
+          <p>The official campus marketplace for students and faculty. Quality products, secure payments, and fast delivery right to your dorm or office.</p>
         </div>
         <div>
-          <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; font-weight: 700; color: var(--brand);">Quick Links</h4>
-          <ul style="margin: 0; padding: 0; list-style: none;">
-            <li style="margin-bottom: 10px;"><a href="index.html" style="color: #fff; text-decoration: none; opacity: 0.8; font-size: 14px; transition: opacity 0.2s;">Browse Products</a></li>
-            <li style="margin-bottom: 10px;"><a href="cart.html" style="color: #fff; text-decoration: none; opacity: 0.8; font-size: 14px; transition: opacity 0.2s;">Shopping Cart</a></li>
-            <li><a href="checkout.html" style="color: #fff; text-decoration: none; opacity: 0.8; font-size: 14px; transition: opacity 0.2s;">Checkout</a></li>
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Browse Products</a></li>
+            <li><a href="cart.html">Shopping Cart</a></li>
+            <li><a href="checkout.html">Checkout</a></li>
           </ul>
         </div>
         <div>
-          <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; font-weight: 700; color: var(--brand);">Support</h4>
-          <ul style="margin: 0; padding: 0; list-style: none;">
-            <li style="margin-bottom: 10px;"><a href="#" style="color: #fff; text-decoration: none; opacity: 0.8; font-size: 14px; transition: opacity 0.2s;">Help Center</a></li>
-            <li style="margin-bottom: 10px;"><a href="#" style="color: #fff; text-decoration: none; opacity: 0.8; font-size: 14px; transition: opacity 0.2s;">Contact Us</a></li>
-            <li><a href="#" style="color: #fff; text-decoration: none; opacity: 0.8; font-size: 14px; transition: opacity 0.2s;">Terms & Policies</a></li>
-          </ul>
+          <h4>Need Help?</h4>
+          <p>For delivery or payment support, contact the campus marketplace admin directly.</p>
         </div>
       </div>
-      <div style="max-width: 1200px; margin: 0 auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; text-align: center; font-size: 13px; opacity: 0.7;">
-        <p style="margin: 0;">&copy; 2026 BGBAZAAR Campus Marketplace. All rights reserved.</p>
+      <div class="footer-bottom">
+        <p>&copy; 2026 BGBAZAAR Campus Marketplace. All rights reserved.</p>
       </div>
     </footer>
 

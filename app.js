@@ -79,6 +79,7 @@ let settings = normalizeSettings(load("bgbazaar_settings", {
   bankDetails: "Bank details will appear here after admin setup."
 }));
 let isAdminLoggedIn = sessionStorage.getItem("bgbazaar_admin") === "true";
+let activeAdminPanel = "dashboardOverview";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -282,6 +283,7 @@ function fillCategoryForm(id) {
   categoryForm.elements.categoryName.value = category.name;
   categoryForm.elements.categoryDescription.value = category.description || "";
   $("#saveCategoryBtn").textContent = "Update Category";
+  showAdminPanel("categorySetup");
   categoryForm.elements.categoryName.focus();
 }
 
@@ -407,6 +409,30 @@ function renderAuth() {
   loginForm.classList.toggle("hidden", isAdminLoggedIn);
   adminDashboard.classList.toggle("hidden", !isAdminLoggedIn);
   logoutBtn?.classList.toggle("hidden", !isAdminLoggedIn);
+}
+
+function showAdminPanel(panelId = "dashboardOverview") {
+  const panels = $$("[data-admin-panel]");
+  const tabs = $$("[data-admin-tab]");
+  if (!panels.length) return;
+
+  const targetPanel = panels.some((panel) => panel.dataset.adminPanel === panelId)
+    ? panelId
+    : "dashboardOverview";
+  activeAdminPanel = targetPanel;
+
+  panels.forEach((panel) => {
+    panel.classList.toggle("hidden", panel.dataset.adminPanel !== targetPanel);
+  });
+  tabs.forEach((tab) => {
+    const isActive = tab.dataset.adminTab === targetPanel;
+    tab.classList.toggle("active", isActive);
+    if (isActive) {
+      tab.setAttribute("aria-current", "page");
+    } else {
+      tab.removeAttribute("aria-current");
+    }
+  });
 }
 
 function renderAdmin() {
@@ -599,9 +625,10 @@ function renderBrandingForm() {
   
   if (brandingForm) {
     brandingForm.elements.siteName.value = settings.siteName;
-    brandingForm.elements.logoUrl.value = settings.logoUrl === DEFAULT_LOGO ? "" : settings.logoUrl;
     brandingForm.elements.contactPhone.value = settings.contactPhone;
     brandingForm.elements.contactEmail.value = settings.contactEmail;
+    const logoPreview = $("#adminLogoPreview");
+    if (logoPreview) logoPreview.src = settings.logoUrl || DEFAULT_LOGO;
   }
   
   if (settingsForm) {
@@ -618,6 +645,7 @@ function renderAll() {
   renderShop();
   renderCart();
   renderAuth();
+  showAdminPanel(activeAdminPanel);
   renderBrandingForm();
   renderCategories();
   renderAdmin();
@@ -663,6 +691,7 @@ function fillProductForm(id) {
   productForm.elements.price.value = item.price;
   productForm.elements.totalStock.value = item.totalStock;
   productForm.elements.listed.checked = item.listed;
+  showAdminPanel("productSetup");
   productForm.elements.name.focus();
 }
 
@@ -684,6 +713,13 @@ function fileToDataUrl(file) {
 }
 
 function attachEvents() {
+  $(".admin-tabs")?.addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-admin-tab]");
+    if (!tab) return;
+    event.preventDefault();
+    showAdminPanel(tab.dataset.adminTab);
+  });
+
   $("#productGrid")?.addEventListener("click", (event) => {
     const id = event.target.dataset.add;
     if (id) addToCart(id);
@@ -772,25 +808,27 @@ function attachEvents() {
   $("#brandingForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const qrFile = form.get("qrImage");
-    let qrImage = settings.qrImage;
-    if (qrFile && qrFile.size > 0) {
-      if (!["image/jpeg", "image/png"].includes(qrFile.type) && !/\.(jpe?g|png)$/i.test(qrFile.name)) {
-        alert("Upload QR code as JPG, JPEG, or PNG.");
+    const logoFile = form.get("logoFile");
+    let logoUrl = settings.logoUrl || DEFAULT_LOGO;
+    if (logoFile && logoFile.size > 0) {
+      const isAllowedType = ["image/jpeg", "image/png", "image/svg+xml"].includes(logoFile.type);
+      const isAllowedExtension = /\.(jpe?g|png|svg)$/i.test(logoFile.name);
+      if (!isAllowedType && !isAllowedExtension) {
+        alert("Upload logo as JPG, JPEG, PNG, or SVG.");
         return;
       }
-      qrImage = await fileToDataUrl(qrFile);
+      logoUrl = await fileToDataUrl(logoFile);
     }
     settings = {
       siteName: form.get("siteName").trim() || "BGBAZAAR",
-      logoUrl: form.get("logoUrl").trim() || DEFAULT_LOGO,
+      logoUrl,
       contactPhone: form.get("contactPhone").trim() || "+91 9876543210",
       contactEmail: form.get("contactEmail").trim() || "contact@bgbazaar.com",
-      upiId: form.get("upiId").trim() || "payments@bgbazaar",
-      qrImage,
-      bankDetails: form.get("bankDetails").trim() || "Bank details will appear here after admin setup."
+      upiId: settings.upiId,
+      qrImage: settings.qrImage,
+      bankDetails: settings.bankDetails
     };
-    event.currentTarget.elements.qrImage.value = "";
+    event.currentTarget.elements.logoFile.value = "";
     renderAll();
   });
 
