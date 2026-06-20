@@ -1,6 +1,10 @@
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "admin123";
 const LOW_STOCK_THRESHOLD = 5;
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+const MAX_PDF_BYTES = 1.5 * 1024 * 1024;
+const STORAGE_WARNING =
+  "Browser storage is full. Use a smaller image or remove older orders before trying again.";
 const DEFAULT_LOGO =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E";
 const DEFAULT_IMAGE =
@@ -90,11 +94,17 @@ function load(key, fallback) {
 }
 
 function save() {
-  localStorage.setItem("bgbazaar_categories", JSON.stringify(categories));
-  localStorage.setItem("bgbazaar_products", JSON.stringify(products));
-  localStorage.setItem("bgbazaar_cart", JSON.stringify(cart));
-  localStorage.setItem("bgbazaar_orders", JSON.stringify(orders));
-  localStorage.setItem("bgbazaar_settings", JSON.stringify(settings));
+  try {
+    localStorage.setItem("bgbazaar_categories", JSON.stringify(categories));
+    localStorage.setItem("bgbazaar_products", JSON.stringify(products));
+    localStorage.setItem("bgbazaar_cart", JSON.stringify(cart));
+    localStorage.setItem("bgbazaar_orders", JSON.stringify(orders));
+    localStorage.setItem("bgbazaar_settings", JSON.stringify(settings));
+    return true;
+  } catch (error) {
+    console.error("Unable to save marketplace data:", error);
+    return false;
+  }
 }
 
 function normalizeSettings(savedSettings) {
@@ -214,8 +224,8 @@ function generateOrderNumber() {
 
 function acceptedProofFile(file) {
   if (!file) return false;
-  const allowed = ["image/jpeg", "image/png", "application/pdf"];
-  const extAllowed = /\.(jpe?g|png|pdf)$/i.test(file.name);
+  const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  const extAllowed = /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
   return allowed.includes(file.type) || extAllowed;
 }
 
@@ -712,6 +722,51 @@ function fileToDataUrl(file) {
   });
 }
 
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("The selected image could not be read."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function optimizeImageFile(file, maxDimension, quality = 0.78, outputType = "image/jpeg") {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Image is too large. Choose a file smaller than 12 MB.");
+  }
+
+  const image = await loadImageFile(file);
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Image processing is not supported in this browser.");
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL(outputType, quality);
+}
+
+async function prepareProofData(file) {
+  const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  if (isPdf) {
+    if (file.size > MAX_PDF_BYTES) {
+      throw new Error("PDF payment proof must be smaller than 1.5 MB.");
+    }
+    return fileToDataUrl(file);
+  }
+  return optimizeImageFile(file, 1400, 0.76);
+}
+
 function attachEvents() {
   $(".admin-tabs")?.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-admin-tab]");
@@ -810,15 +865,26 @@ function attachEvents() {
     const form = new FormData(event.currentTarget);
     const logoFile = form.get("logoFile");
     let logoUrl = settings.logoUrl || DEFAULT_LOGO;
-    if (logoFile && logoFile.size > 0) {
-      const isAllowedType = ["image/jpeg", "image/png", "image/svg+xml"].includes(logoFile.type);
-      const isAllowedExtension = /\.(jpe?g|png|svg)$/i.test(logoFile.name);
-      if (!isAllowedType && !isAllowedExtension) {
-        alert("Upload logo as JPG, JPEG, PNG, or SVG.");
-        return;
+    try {
+      if (logoFile && logoFile.size > 0) {
+        const isSvg = logoFile.type === "image/svg+xml" || /\.svg$/i.test(logoFile.name);
+        const isAllowedType = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"].includes(logoFile.type);
+        const isAllowedExtension = /\.(jpe?g|png|webp|svg)$/i.test(logoFile.name);
+        if (!isAllowedType && !isAllowedExtension) {
+          throw new Error("Upload logo as JPG, JPEG, PNG, WebP, or SVG.");
+        }
+        if (isSvg && logoFile.size > 500 * 1024) {
+          throw new Error("SVG logo must be smaller than 500 KB.");
+        }
+        logoUrl = isSvg
+          ? await fileToDataUrl(logoFile)
+          : await optimizeImageFile(logoFile, 512, 0.82);
       }
-      logoUrl = await fileToDataUrl(logoFile);
+    } catch (error) {
+      alert(error.message || "The logo could not be uploaded.");
+      return;
     }
+    const previousSettings = { ...settings };
     settings = {
       siteName: form.get("siteName").trim() || "BGBAZAAR",
       logoUrl,
@@ -828,6 +894,11 @@ function attachEvents() {
       qrImage: settings.qrImage,
       bankDetails: settings.bankDetails
     };
+    if (!save()) {
+      settings = previousSettings;
+      alert(STORAGE_WARNING);
+      return;
+    }
     event.currentTarget.elements.logoFile.value = "";
     renderAll();
   });
@@ -837,16 +908,28 @@ function attachEvents() {
     const form = new FormData(event.currentTarget);
     const qrFile = form.get("qrImage");
     let qrImage = settings.qrImage;
-    if (qrFile && qrFile.size > 0) {
-      if (!["image/jpeg", "image/png"].includes(qrFile.type) && !/\.(jpe?g|png)$/i.test(qrFile.name)) {
-        alert("Upload QR code as JPG, JPEG, or PNG.");
-        return;
+    try {
+      if (qrFile && qrFile.size > 0) {
+        const isAllowedType = ["image/jpeg", "image/png", "image/webp"].includes(qrFile.type);
+        const isAllowedExtension = /\.(jpe?g|png|webp)$/i.test(qrFile.name);
+        if (!isAllowedType && !isAllowedExtension) {
+          throw new Error("Upload QR code as JPG, JPEG, PNG, or WebP.");
+        }
+        qrImage = await optimizeImageFile(qrFile, 900, 0.84, "image/png");
       }
-      qrImage = await fileToDataUrl(qrFile);
+    } catch (error) {
+      alert(error.message || "The payment QR image could not be uploaded.");
+      return;
     }
+    const previousSettings = { ...settings };
     settings.upiId = form.get("upiId").trim() || "payments@bgbazaar";
     settings.qrImage = qrImage;
     settings.bankDetails = form.get("bankDetails").trim() || "Bank details will appear here after admin setup.";
+    if (!save()) {
+      settings = previousSettings;
+      alert(STORAGE_WARNING);
+      return;
+    }
     event.currentTarget.elements.qrImage.value = "";
     alert("Payment settings updated successfully!");
     renderAll();
@@ -891,7 +974,10 @@ function attachEvents() {
   $("#paymentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const checkoutMessage = $("#checkoutMessage");
+    const submitButton = $("#submitOrderBtn");
     const rows = getCartRows();
+    checkoutMessage.classList.remove("error");
+    checkoutMessage.textContent = "";
     if (!rows.length) {
       checkoutMessage.textContent = "Add at least one product before checkout.";
       checkoutMessage.classList.add("error");
@@ -901,7 +987,7 @@ function attachEvents() {
     const form = new FormData(event.currentTarget);
     const proof = form.get("paymentProof");
     if (!acceptedProofFile(proof)) {
-      checkoutMessage.textContent = "Upload payment proof as JPG, JPEG, PNG, or PDF.";
+      checkoutMessage.textContent = "Upload payment proof as JPG, JPEG, PNG, WebP, or PDF.";
       checkoutMessage.classList.add("error");
       return;
     }
@@ -914,49 +1000,71 @@ function attachEvents() {
       return;
     }
 
-    const proofData = await fileToDataUrl(proof);
-    const now = new Date().toISOString();
-    const order = {
-      id: crypto.randomUUID(),
-      orderNumber: generateOrderNumber(),
-      buyerName: form.get("buyerName").trim(),
-      mobileNumber: form.get("phone").trim(),
-      emailAddress: form.get("email").trim(),
-      deliveryLocation: form.get("location").trim(),
-      notes: form.get("notes").trim(),
-      totalAmount: cartTotal(),
-      status: "Pending",
-      createdAt: now,
-      items: rows.map((row) => ({
-        productId: row.id,
-        name: row.product.name,
-        quantity: row.quantity,
-        unitPrice: row.product.price,
-        subtotal: row.product.price * row.quantity
-      })),
-      utrNumber: form.get("utrNumber").trim(),
-      paymentProofName: proof.name,
-      paymentProofType: proof.type,
-      paymentProofData: proofData,
-      paymentVerificationStatus: "Pending",
-      paymentSubmittedAt: now
-    };
+    submitButton.disabled = true;
+    submitButton.textContent = "Submitting Order...";
+    checkoutMessage.textContent = "Processing payment proof...";
 
-    products = products.map((product) => {
-      const row = rows.find((item) => item.id === product.id);
-      return row ? { ...product, soldQuantity: product.soldQuantity + row.quantity } : product;
-    });
-    orders.push(order);
-    cart = [];
-    event.currentTarget.reset();
-    checkoutMessage.classList.remove("error");
-    checkoutMessage.textContent = `Order ${order.orderNumber} submitted. Redirecting...`;
-    renderAll();
-    
-    // Redirect to order success page after 2 seconds
-    setTimeout(() => {
-      window.location.href = "order-success.html";
-    }, 2000);
+    try {
+      const proofData = await prepareProofData(proof);
+      const isPdf = proof.type === "application/pdf" || /\.pdf$/i.test(proof.name);
+      const now = new Date().toISOString();
+      const order = {
+        id: crypto.randomUUID(),
+        orderNumber: generateOrderNumber(),
+        buyerName: form.get("buyerName").trim(),
+        mobileNumber: form.get("phone").trim(),
+        emailAddress: form.get("email").trim(),
+        deliveryLocation: form.get("location").trim(),
+        notes: form.get("notes").trim(),
+        totalAmount: cartTotal(),
+        status: "Pending",
+        createdAt: now,
+        items: rows.map((row) => ({
+          productId: row.id,
+          name: row.product.name,
+          quantity: row.quantity,
+          unitPrice: row.product.price,
+          subtotal: row.product.price * row.quantity
+        })),
+        utrNumber: form.get("utrNumber").trim(),
+        paymentProofName: proof.name,
+        paymentProofType: isPdf ? "application/pdf" : "image/jpeg",
+        paymentProofData: proofData,
+        paymentVerificationStatus: "Pending",
+        paymentSubmittedAt: now
+      };
+
+      const previousProducts = products;
+      const previousOrders = orders;
+      const previousCart = cart;
+      products = products.map((product) => {
+        const row = rows.find((item) => item.id === product.id);
+        return row ? { ...product, soldQuantity: product.soldQuantity + row.quantity } : product;
+      });
+      orders = [...orders, order];
+      cart = [];
+
+      if (!save()) {
+        products = previousProducts;
+        orders = previousOrders;
+        cart = previousCart;
+        save();
+        throw new Error(STORAGE_WARNING);
+      }
+
+      event.currentTarget.reset();
+      checkoutMessage.textContent = `Order ${order.orderNumber} submitted. Redirecting...`;
+      renderAll();
+      setTimeout(() => {
+        window.location.href = "order-success.html";
+      }, 1200);
+    } catch (error) {
+      checkoutMessage.textContent = error.message || "Order submission failed. Please try again.";
+      checkoutMessage.classList.add("error");
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "Submit Order";
+    }
   });
 
   $("#loginForm")?.addEventListener("submit", (event) => {

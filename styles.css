@@ -403,6 +403,13 @@ label span {
   color: var(--ink);
 }
 
+.file-hint {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 input,
 textarea,
 select {
