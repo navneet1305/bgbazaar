@@ -1,4 +1,4 @@
-import { db, ref, set, get, child, remove, onValue, update, push } from "./firebase.js";
+import { auth, db, ref, set, get, child, remove, onValue, update, push, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "./firebase.js";
 
 const ADMIN_USERNAME = "amaresh@bgbazaar.com";
 const ADMIN_PASSWORD = "amareshraj@1321";
@@ -83,6 +83,10 @@ let settings = normalizeSettings(load("bgbazaar_settings", {
 let isAdminLoggedIn = sessionStorage.getItem("bgbazaar_admin") === "true";
 let activeAdminPanel = "dashboardOverview";
 let sharedBackendReady = false;
+let isUserLoggedIn = false;
+let currentUser = null;
+let userData = null;
+let userCart = [];
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -149,6 +153,50 @@ async function subscribeToCollection(path, callback) {
   }, (error) => {
     console.error("Realtime subscription error:", error);
   });
+}
+
+async function saveUserData(uid, data) {
+  await set(ref(db, `users/${uid}`), data);
+  return data;
+}
+
+async function getUserData(uid) {
+  const snapshot = await get(ref(db, `users/${uid}`));
+  return snapshot.exists() ? snapshot.val() : null;
+}
+
+async function getUserCart(uid) {
+  const snapshot = await get(ref(db, `users/${uid}/cart`));
+  return snapshot.exists() ? snapshot.val() : [];
+}
+
+async function saveUserCart(uid, cartData) {
+  await set(ref(db, `users/${uid}/cart`), cartData);
+}
+
+function mergeCarts(localCart, savedCart) {
+  const merged = [...localCart];
+  savedCart.forEach((savedItem) => {
+    const existing = merged.find((item) => item.id === savedItem.id);
+    if (existing) {
+      existing.quantity = Math.max(existing.quantity, savedItem.quantity);
+    } else {
+      merged.push(savedItem);
+    }
+  });
+  return merged;
+}
+
+async function loadUserCart(uid) {
+  const savedCart = await getUserCart(uid);
+  const localCart = load("bgbazaar_cart", []);
+  cart = mergeCarts(localCart, savedCart);
+}
+
+async function syncCartToFirebase() {
+  if (isUserLoggedIn && currentUser) {
+    await saveUserCart(currentUser.uid, cart);
+  }
 }
 
 async function saveCategory(category) {
@@ -620,6 +668,30 @@ function renderShared() {
   if (ordersMetric) ordersMetric.textContent = orders.length;
 }
 
+function renderUserStatus() {
+  const userLoginSection = $("#userLoginSection");
+  const userLoggedInSection = $("#userLoggedInSection");
+  const loggedInUserEmail = $("#loggedInUserEmail");
+
+  if (userLoginSection) userLoginSection.classList.toggle("hidden", isUserLoggedIn);
+  if (userLoggedInSection) userLoggedInSection.classList.toggle("hidden", !isUserLoggedIn);
+  if (loggedInUserEmail && isUserLoggedIn) loggedInUserEmail.textContent = userData?.email || '-';
+}
+
+function fillCheckoutForm() {
+  const buyerNameInput = $("#buyerName");
+  const phoneInput = $("#phone");
+  const emailInput = $("#email");
+  const locationInput = $("#location");
+  
+  if (isUserLoggedIn && userData) {
+    if (buyerNameInput) buyerNameInput.value = userData.name || "";
+    if (phoneInput) phoneInput.value = userData.phone || "";
+    if (emailInput) emailInput.value = userData.email || "";
+    if (locationInput) locationInput.value = userData.address || "";
+  }
+}
+
 function renderFilters() {
   const categoryFilter = $("#categoryFilter");
   if (!categoryFilter) return;
@@ -803,6 +875,7 @@ function renderCart() {
       <p>${escapeHtml(settings.bankDetails).replaceAll("\n", "<br>")}</p>
     `;
   }
+  fillCheckoutForm();
 }
 
 function renderAuth() {
@@ -1050,6 +1123,7 @@ function renderBrandingForm() {
 
 function renderAll() {
   renderShared();
+  renderUserStatus();
   renderFilters();
   renderShop();
   renderCart();
@@ -1060,10 +1134,42 @@ function renderAll() {
   renderAdmin();
   renderOrders();
   renderDashboard();
+  renderUserOrders();
   save();
 }
 
-function addToCart(id) {
+function renderUserOrders() {
+  const userOrderHistory = $("#userOrderHistory");
+  const userOrdersList = $("#userOrdersList");
+  
+  if (!userOrderHistory || !userOrdersList) return;
+  
+  if (isUserLoggedIn && currentUser && currentUser.email) {
+    const userOrders = orders.filter(order => order.emailAddress === currentUser.email);
+    userOrderHistory.classList.remove("hidden");
+    
+    userOrdersList.innerHTML = userOrders.length
+      ? userOrders.slice().reverse().map(order => {
+          const itemsSummary = (order.items || []).map(item => escapeHtml(item.name)).join(", ");
+          return `
+            <div style="padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <strong>${escapeHtml(order.orderNumber)}</strong>
+                <span class="status-pill ${order.status === "Cancelled" ? "cancelled" : order.status === "Payment Submitted" ? "pending" : ""}">${escapeHtml(order.status)}</span>
+              </div>
+              <p style="margin: 4px 0; font-size: 14px;">${itemsSummary}</p>
+              <p style="margin: 4px 0; color: var(--brand); font-weight: 600;">${money(orderTotal(order))}</p>
+              <p style="margin: 4px 0 0; font-size: 12px; color: var(--muted);">${new Date(order.createdAt).toLocaleString("en-IN")}</p>
+            </div>
+          `;
+        }).join("")
+      : `<div class="muted">No past orders found.</div>`;
+  } else {
+    userOrderHistory.classList.add("hidden");
+  }
+}
+
+async function addToCart(id) {
   const product = products.find((item) => item.id === id);
   if (!product || remainingStock(product) < 1) return;
   const existing = cart.find((item) => item.id === id);
@@ -1072,10 +1178,11 @@ function addToCart(id) {
   } else {
     cart.push({ id, quantity: 1 });
   }
+  if (isUserLoggedIn && currentUser) await syncCartToFirebase();
   renderAll();
 }
 
-function changeCartQuantity(id, amount) {
+async function changeCartQuantity(id, amount) {
   const product = products.find((item) => item.id === id);
   const existing = cart.find((item) => item.id === id);
   if (!product || !existing) return;
@@ -1085,6 +1192,7 @@ function changeCartQuantity(id, amount) {
   } else {
     existing.quantity = Math.min(existing.quantity, remainingStock(product));
   }
+  if (isUserLoggedIn && currentUser) await syncCartToFirebase();
   renderAll();
 }
 
@@ -1175,17 +1283,22 @@ function attachEvents() {
     showAdminPanel(tab.dataset.adminTab);
   });
 
-  $("#productGrid")?.addEventListener("click", (event) => {
+  $("#productGrid")?.addEventListener("click", async (event) => {
     const id = event.target.dataset.add;
-    if (id) addToCart(id);
+    if (id) await addToCart(id);
   });
 
-  $("#cartList")?.addEventListener("click", (event) => {
+  $("#cartList")?.addEventListener("click", async (event) => {
     const { plus, minus, remove } = event.target.dataset;
-    if (plus) changeCartQuantity(plus, 1);
-    if (minus) changeCartQuantity(minus, -1);
+    if (plus) {
+      await changeCartQuantity(plus, 1);
+    }
+    if (minus) {
+      await changeCartQuantity(minus, -1);
+    }
     if (remove) {
       cart = cart.filter((item) => item.id !== remove);
+      if (isUserLoggedIn && currentUser) await syncCartToFirebase();
       renderAll();
     }
   });
@@ -1529,6 +1642,7 @@ function attachEvents() {
       });
       orders = [...orders.filter((item) => item.id !== savedOrder.id), savedOrder];
       cart = [];
+      sessionStorage.setItem("bgbazaar_last_order", JSON.stringify(savedOrder));
 
       if (!save()) {
         products = previousProducts;
@@ -1590,6 +1704,110 @@ function attachEvents() {
     renderAll();
   });
 
+  $("#userLoginForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const message = $("#userLoginMessage");
+    const email = form.get("userEmail").trim();
+    const password = form.get("userPassword").trim();
+    
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      const savedUserData = await getUserData(currentUser.uid);
+      userData = savedUserData || { email: currentUser.email };
+      await loadUserCart(currentUser.uid);
+      isUserLoggedIn = true;
+      event.currentTarget.reset();
+      renderAll();
+    } catch (error) {
+      isUserLoggedIn = false;
+      currentUser = null;
+      userData = null;
+      message.textContent = error.message || "Login failed. Please try again.";
+    }
+  });
+
+  $("#userRegisterForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const message = $("#userRegisterMessage");
+    const name = form.get("registerName").trim();
+    const email = form.get("registerEmail").trim();
+    const password = form.get("registerPassword").trim();
+    const phone = form.get("registerPhone").trim();
+    const address = form.get("registerAddress").trim();
+    
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      userData = {
+        uid: currentUser.uid,
+        name,
+        email,
+        phone,
+        address
+      };
+      await saveUserData(currentUser.uid, userData);
+      cart = [];
+      await saveUserCart(currentUser.uid, cart);
+      isUserLoggedIn = true;
+      event.currentTarget.reset();
+      renderAll();
+    } catch (error) {
+      isUserLoggedIn = false;
+      currentUser = null;
+      userData = null;
+      message.textContent = error.message || "Registration failed. Please try again.";
+    }
+  });
+
+  $("#userLogoutBtn")?.addEventListener("click", async () => {
+    try {
+      if (isUserLoggedIn && currentUser) {
+        await syncCartToFirebase();
+      }
+      await signOut(auth);
+      isUserLoggedIn = false;
+      currentUser = null;
+      userData = null;
+      userCart = [];
+      localStorage.removeItem("bgbazaar_cart");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    renderAll();
+  });
+
+  $("#showRegisterForm")?.addEventListener("click", () => {
+    $("#userLoginForm")?.classList.add("hidden");
+    $("#userRegisterForm")?.classList.remove("hidden");
+    $("#userLoginMessage").textContent = "";
+    $("#userRegisterMessage").textContent = "";
+  });
+
+  $("#showLoginForm")?.addEventListener("click", () => {
+    $("#userRegisterForm")?.classList.add("hidden");
+    $("#userLoginForm")?.classList.remove("hidden");
+    $("#userLoginMessage").textContent = "";
+    $("#userRegisterMessage").textContent = "";
+  });
+
+  $("#userBtn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const dropdown = $("#userDropdown");
+    if (dropdown) {
+      dropdown.classList.toggle("hidden");
+    }
+  });
+
+  document.addEventListener("click", () => {
+    const dropdown = $("#userDropdown");
+    if (dropdown) {
+      dropdown.classList.add("hidden");
+    }
+  });
+
   $("#resetFormBtn")?.addEventListener("click", resetProductForm);
 
   ["#searchInput", "#categoryFilter"].forEach((selector) => {
@@ -1606,6 +1824,21 @@ function attachEvents() {
 }
 
 function setupRealtimeListeners() {
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      const savedUserData = await getUserData(user.uid);
+      userData = savedUserData || { email: user.email };
+      await loadUserCart(user.uid);
+      isUserLoggedIn = true;
+    } else {
+      isUserLoggedIn = false;
+      currentUser = null;
+      userData = null;
+    }
+    renderAll();
+  });
+
   onValue(ref(db, "categories"), (snapshot) => {
     const data = snapshot.val();
     categories = data ? Object.values(data) : [];
@@ -1624,7 +1857,7 @@ function setupRealtimeListeners() {
   });
   onValue(ref(db, "orders"), (snapshot) => {
     const data = snapshot.val();
-    if (data && isAdminLoggedIn) {
+    if (data) {
       orders = migrateOrders(Object.values(data));
       renderAll();
     }

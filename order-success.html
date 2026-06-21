@@ -87,33 +87,48 @@
       </section>
     </main>
 
-    <script src="app.js"></script>
+    <script src="app.js" type="module"></script>
     <script>
+      function escapeHtml(value) {
+        return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+      }
+      function money(value) {
+        return `Rs. ${Number(value).toLocaleString("en-IN")}`;
+      }
+
       function displayOrderSuccess() {
-        const lastOrder = orders[orders.length - 1];
-        if (!lastOrder) {
+        const orderData = sessionStorage.getItem("bgbazaar_last_order");
+        const productsData = localStorage.getItem("bgbazaar_products");
+        const products = productsData ? JSON.parse(productsData) : [];
+        
+        if (!orderData) {
           document.getElementById('orderSuccessContent').innerHTML = '<div class="empty">No order found. <a href="checkout.html">Return to checkout</a></div>';
           return;
         }
 
-        document.getElementById('successOrderNumber').textContent = lastOrder.orderNumber;
-        document.getElementById('successName').textContent = lastOrder.buyerName;
-        document.getElementById('successMobile').textContent = 'Mobile: ' + lastOrder.mobileNumber;
-        document.getElementById('successEmail').textContent = 'Email: ' + lastOrder.emailAddress;
+        const lastOrder = JSON.parse(orderData);
+        const orderTotal = Number(lastOrder.totalAmount || 0);
+
+        document.getElementById('successOrderNumber').textContent = lastOrder.orderNumber || '-';
+        document.getElementById('successName').textContent = lastOrder.buyerName || '-';
+        document.getElementById('successMobile').textContent = lastOrder.mobileNumber ? 'Mobile: ' + lastOrder.mobileNumber : '-';
+        document.getElementById('successEmail').textContent = lastOrder.emailAddress ? 'Email: ' + lastOrder.emailAddress : '-';
         document.getElementById('successAddress').textContent = lastOrder.deliveryLocation || 'BgBazaar Office';
-        document.getElementById('successTotal').textContent = money(orderTotal(lastOrder));
+        document.getElementById('successTotal').textContent = money(orderTotal);
         document.getElementById('successUtr').textContent = lastOrder.utrNumber || '-';
 
-        const itemsHtml = lastOrder.items.map(item => `
+        const itemsHtml = (lastOrder.items || []).map(item => {
+          return `
           <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px; background: #fff; border-radius: 6px;">
             <div>
               <p style="margin: 0; font-weight: 600;">${escapeHtml(item.name)}</p>
               <p style="margin: 4px 0 0; color: var(--muted); font-size: 13px;">Qty: ${item.quantity} × ${money(item.unitPrice)}</p>
             </div>
-            <p style="margin: 0; font-weight: 700; color: var(--brand);">${money(item.subtotal)}</p>
+            <p style="margin: 0; font-weight: 700; color: var(--brand);">${money(item.subtotal || (item.unitPrice * item.quantity))}</p>
           </div>
-        `).join('');
-        document.getElementById('successItems').innerHTML = itemsHtml;
+          `;
+        }).join('');
+        document.getElementById('successItems').innerHTML = itemsHtml || '<p class="muted">No items</p>';
 
         document.getElementById('printOrderBtn').addEventListener('click', () => window.print());
       }
