@@ -80,6 +80,7 @@ let settings = normalizeSettings(load("bgbazaar_settings", {
 }));
 let isAdminLoggedIn = sessionStorage.getItem("bgbazaar_admin") === "true";
 let activeAdminPanel = "dashboardOverview";
+let sharedBackendReady = false;
 
 if (localStorage.getItem("bgbazaar_orders_reset_version") !== ORDERS_RESET_VERSION) {
   orders = [];
@@ -106,6 +107,67 @@ function save() {
   } catch (error) {
     console.error("Unable to save marketplace data:", error);
     return false;
+  }
+}
+
+async function sharedRequest(action, data = null, admin = false) {
+  const response = await fetch("/api/store", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action,
+      data,
+      ...(admin ? { username: ADMIN_USERNAME, password: ADMIN_PASSWORD } : {})
+    })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error || "Shared data service is unavailable.");
+  }
+  sharedBackendReady = true;
+  return result.data;
+}
+
+function applySharedState(data, includeOrders = false) {
+  if (!data) return;
+  if (Array.isArray(data.categories)) categories = data.categories;
+  if (Array.isArray(data.products)) products = migrateProducts(data.products);
+  if (data.settings) settings = normalizeSettings(data.settings);
+  if (includeOrders && Array.isArray(data.orders)) orders = migrateOrders(data.orders);
+  save();
+  renderAll();
+}
+
+async function hydrateSharedState(includeOrders = isAdminLoggedIn) {
+  try {
+    let data;
+    if (includeOrders) {
+      data = await sharedRequest("getAdminState", null, true);
+    } else {
+      const response = await fetch("/api/store", { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Shared data service is unavailable.");
+      data = result.data;
+      sharedBackendReady = true;
+    }
+
+    if (!data?.settings) {
+      data = await sharedRequest("bootstrap", { categories, products, settings });
+    }
+    applySharedState(data, includeOrders);
+  } catch (error) {
+    sharedBackendReady = false;
+    console.warn("Using local cache until shared storage is available:", error.message);
+  }
+}
+
+async function persistShared(action, data, admin = true) {
+  try {
+    return await sharedRequest(action, data, admin);
+  } catch (error) {
+    alert(`${error.message} Your change was not shared. Please try again.`);
+    await hydrateSharedState(isAdminLoggedIn);
+    throw error;
   }
 }
 
