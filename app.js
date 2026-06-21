@@ -3,11 +3,10 @@ const ADMIN_PASSWORD = "amareshraj@1321";
 const LOW_STOCK_THRESHOLD = 5;
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_BYTES = 1.5 * 1024 * 1024;
+const ORDERS_RESET_VERSION = "2026-06-21-order-management-clean-start";
 const STORAGE_WARNING =
   "Browser storage is full. Use a smaller image or remove older orders before trying again.";
 const DELIVERY_POINT_ADDRESS = "BgBazaar Office";
-const ORDERS_SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/1MqYYu7vkNXSjGTFE1egKOTeBQqCN4TTicZQvxP2wBv8/edit?usp=drivesdk";
 const DEFAULT_LOGO =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E";
 const DEFAULT_IMAGE =
@@ -87,6 +86,12 @@ let settings = normalizeSettings(load("bgbazaar_settings", {
 }));
 let isAdminLoggedIn = sessionStorage.getItem("bgbazaar_admin") === "true";
 let activeAdminPanel = "dashboardOverview";
+
+if (localStorage.getItem("bgbazaar_orders_reset_version") !== ORDERS_RESET_VERSION) {
+  orders = [];
+  localStorage.setItem("bgbazaar_orders_reset_version", ORDERS_RESET_VERSION);
+  localStorage.setItem("bgbazaar_orders", JSON.stringify(orders));
+}
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -301,6 +306,20 @@ function downloadOrdersCsv() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function clearOrders() {
+  if (!orders.length) {
+    alert("No orders available to clear.");
+    return;
+  }
+  if (!confirm("Delete all saved orders from Order Management? Inventory counts will stay unchanged.")) return;
+  orders = [];
+  if (!save()) {
+    alert("Orders could not be cleared. Please try again.");
+    return;
+  }
+  renderAll();
 }
 
 function openPaymentProof(orderId) {
@@ -707,8 +726,6 @@ function renderRevenueTable() {
 function renderOrders() {
   const ordersList = $("#ordersList");
   if (!ordersList || !isAdminLoggedIn) return;
-  const sheetLink = $("#ordersSheetLink");
-  if (sheetLink) sheetLink.href = ORDERS_SHEET_URL;
 
   ordersList.innerHTML = orders.length
     ? orders
@@ -722,7 +739,7 @@ function renderOrders() {
             ? `<p class="muted">No payment proof uploaded.</p>`
             : isImageProof(order)
             ? `<div class="proof-card">
-                <img src="${escapeHtml(order.paymentProofData)}" alt="Payment proof for ${escapeHtml(order.orderNumber)}">
+                <p class="muted">Payment screenshot uploaded. Use the actions below to view or download it.</p>
                 <div class="proof-actions">
                   <button class="proof-preview" type="button" data-proof-open="${escapeHtml(order.id)}">Open screenshot</button>
                   <a class="proof-preview" href="${escapeHtml(order.paymentProofData)}" download="${downloadName}">Download proof</a>
@@ -982,6 +999,7 @@ function attachEvents() {
   });
 
   $("#downloadOrdersCsv")?.addEventListener("click", downloadOrdersCsv);
+  $("#clearOrdersBtn")?.addEventListener("click", clearOrders);
 
   $("#productForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
