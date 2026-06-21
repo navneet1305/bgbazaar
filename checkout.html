@@ -3,18 +3,18 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
-    <meta name="description" content="BGBAZAAR Checkout - Secure campus marketplace checkout. Fast delivery with multiple payment options.">
-    <meta name="theme-color" content="#0066cc">
+    <meta name="description" content="BG BAZAAR Checkout - Secure payment and pickup from BGBAZAAR Office.">
+    <meta name="theme-color" content="#0797a8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>BGBAZAAR | Secure Checkout</title>
+    <title>BG BAZAAR | Secure Checkout</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="index.html" aria-label="BGBAZAAR home">
-        <img id="siteLogo" alt="BGBAZAAR logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E">
-        <span id="siteName">BGBAZAAR</span>
+      <a class="brand" href="index.html" aria-label="BG BAZAAR home">
+        <img id="siteLogo" alt="BG BAZAAR logo" src="assets/bg-bazaar-logo.jpeg">
+        <span id="siteName">BG BAZAAR</span>
       </a>
       <nav aria-label="Main navigation">
         <a href="index.html">Home</a>
@@ -25,17 +25,17 @@
     </header>
 
     <main>
-      <section class="page-hero" style="background: linear-gradient(135deg, rgba(0, 102, 204, 0.9), rgba(26, 40, 71, 0.85)), url('https://images.unsplash.com/photo-1556742212-5b321f3c261d?auto=format&fit=crop&w=1400&q=80') center/cover;">
+      <section class="page-hero pickup-hero">
         <p class="eyebrow">Campus Checkout</p>
         <h1>Complete Your Order</h1>
-        <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Fast, secure checkout with multiple payment options. No account needed. Delivery right to campus.</p>
+        <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Complete your payment securely and collect your order from BGBAZAAR Office.</p>
       </section>
 
       <section class="section checkout-grid">
         <div>
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Delivery Information</p>
+              <p class="eyebrow">Pickup Information</p>
               <h2>Your Details</h2>
             </div>
           </div>
@@ -56,6 +56,10 @@
             <label>
               Delivery Point Address
               <input name="location" type="text" value="BgBazaar Office" readonly>
+            </label>
+            <label>
+              Transaction ID / UTR
+              <input name="utrNumber" type="text" placeholder="Enter UTR from your payment confirmation" required>
             </label>
             <label>
               Payment Proof

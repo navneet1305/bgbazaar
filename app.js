@@ -7,10 +7,9 @@ const ORDERS_RESET_VERSION = "2026-06-21-order-management-clean-start";
 const STORAGE_WARNING =
   "Browser storage is full. Use a smaller image or remove older orders before trying again.";
 const DELIVERY_POINT_ADDRESS = "BgBazaar Office";
-const DEFAULT_LOGO =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E";
+const DEFAULT_LOGO = "assets/bg-bazaar-logo.jpeg";
 const DEFAULT_IMAGE =
-  "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=900&q=80";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='675' viewBox='0 0 900 675'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23099aac'/%3E%3Cstop offset='1' stop-color='%23f59a1a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='675' rx='42' fill='%23f8fbff'/%3E%3Ccircle cx='720' cy='90' r='180' fill='%23fff4df'/%3E%3Ccircle cx='135' cy='560' r='150' fill='%23e0f7fb'/%3E%3Crect x='142' y='160' width='616' height='356' rx='34' fill='url(%23bg)' opacity='0.14'/%3E%3Cpath d='M260 405h380' stroke='%23099aac' stroke-width='24' stroke-linecap='round'/%3E%3Cpath d='M300 330h300' stroke='%23f59a1a' stroke-width='24' stroke-linecap='round'/%3E%3Ctext x='450' y='270' text-anchor='middle' font-family='Avenir Next, Segoe UI, Arial, sans-serif' font-size='54' font-weight='800' fill='%23058a99'%3EBG BAZAAR%3C/text%3E%3Ctext x='450' y='465' text-anchor='middle' font-family='Avenir Next, Segoe UI, Arial, sans-serif' font-size='24' font-weight='700' letter-spacing='5' fill='%2364758b'%3ECAMPUS ESSENTIALS%3C/text%3E%3C/svg%3E";
 const ORDER_STATUSES = [
   "Pending",
   "Confirmed",
@@ -33,8 +32,7 @@ const initialProducts = [
     name: "Daily Grocery Pack",
     description: "Rice, pulses, spices, and essentials for everyday cooking.",
     category: "Home & Kitchen",
-    image:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=80",
+    image: DEFAULT_IMAGE,
     price: 699,
     totalStock: 18,
     soldQuantity: 0,
@@ -46,8 +44,7 @@ const initialProducts = [
     name: "Cotton T-shirt",
     description: "Soft cotton regular-fit T-shirt for daily wear.",
     category: "Fashion",
-    image:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
+    image: DEFAULT_IMAGE,
     price: 349,
     totalStock: 25,
     soldQuantity: 0,
@@ -59,8 +56,7 @@ const initialProducts = [
     name: "Kitchen Storage Set",
     description: "Airtight containers for grains, snacks, and spices.",
     category: "Home & Kitchen",
-    image:
-      "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=900&q=80",
+    image: DEFAULT_IMAGE,
     price: 499,
     totalStock: 12,
     soldQuantity: 0,
@@ -74,10 +70,10 @@ let products = migrateProducts(load("bgbazaar_products", initialProducts));
 let cart = load("bgbazaar_cart", []);
 let orders = migrateOrders(load("bgbazaar_orders", []));
 let settings = normalizeSettings(load("bgbazaar_settings", {
-  siteName: "BGBAZAAR",
+  siteName: "BG BAZAAR",
   logoUrl: DEFAULT_LOGO,
-  contactPhone: "+91 9876543210",
-  contactEmail: "contact@bgbazaar.com",
+  contactPhone: "9117138483",
+  contactEmail: "amaresh.r2030i@iimbg.ac.in",
   upiId: "payments@bgbazaar",
   qrImage: "",
   bankDetails: "Bank details will appear here after admin setup."
@@ -114,11 +110,18 @@ function save() {
 }
 
 function normalizeSettings(savedSettings) {
+  const legacyLogo =
+    !savedSettings.logoUrl ||
+    savedSettings.logoUrl.startsWith("data:image/svg+xml") ||
+    savedSettings.logoUrl.includes("BG%3C/text%3E%3Ctext");
+  const legacySiteName = !savedSettings.siteName || savedSettings.siteName === "BGBAZAAR";
+  const legacyPhone = !savedSettings.contactPhone || savedSettings.contactPhone === "+91 9876543210";
+  const legacyEmail = !savedSettings.contactEmail || savedSettings.contactEmail === "contact@bgbazaar.com";
   return {
-    siteName: savedSettings.siteName || "BGBAZAAR",
-    logoUrl: savedSettings.logoUrl || DEFAULT_LOGO,
-    contactPhone: savedSettings.contactPhone || "+91 9876543210",
-    contactEmail: savedSettings.contactEmail || "contact@bgbazaar.com",
+    siteName: legacySiteName ? "BG BAZAAR" : savedSettings.siteName,
+    logoUrl: legacyLogo ? DEFAULT_LOGO : savedSettings.logoUrl,
+    contactPhone: legacyPhone ? "9117138483" : savedSettings.contactPhone,
+    contactEmail: legacyEmail ? "amaresh.r2030i@iimbg.ac.in" : savedSettings.contactEmail,
     upiId: savedSettings.upiId || "payments@bgbazaar",
     qrImage: savedSettings.qrImage || "",
     bankDetails: savedSettings.bankDetails || "Bank details will appear here after admin setup."
@@ -129,12 +132,13 @@ function migrateProducts(savedProducts) {
   return savedProducts.map((item) => {
     const totalStock = Number(item.totalStock ?? item.quantity ?? 0);
     const soldQuantity = Number(item.soldQuantity ?? 0);
+    const legacyImage = !item.image || item.image.includes("images.unsplash.com");
     return {
       id: item.id || crypto.randomUUID(),
       name: item.name || "Untitled product",
-      description: item.description || "Product details available at BGBAZAAR.",
+      description: item.description || "Product details available at BG BAZAAR.",
       category: item.category || "General",
-      image: item.image || DEFAULT_IMAGE,
+      image: legacyImage ? DEFAULT_IMAGE : item.image,
       price: Number(item.price || 0),
       totalStock,
       soldQuantity: Math.min(soldQuantity, totalStock),
@@ -266,6 +270,7 @@ function buildOrdersCsv() {
     "Items",
     "Total Amount",
     "Order Status",
+    "UTR Number",
     "Payment Proof File",
     "Payment Submitted At"
   ];
@@ -281,6 +286,7 @@ function buildOrdersCsv() {
       .join("; "),
     orderTotal(order),
     order.status,
+    order.utrNumber,
     order.paymentProofName || proofFileName(order.orderNumber, order.paymentProofType),
     order.paymentSubmittedAt ? new Date(order.paymentSubmittedAt).toLocaleString("en-IN") : ""
   ]);
@@ -408,21 +414,22 @@ function printOrderDetails(orderId) {
           h1 { margin: 0 0 6px; font-size: 22px; }
           h2 { margin: 14px 0 8px; font-size: 14px; }
           p { margin: 3px 0; }
-          .header { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid #0066cc; }
+          .header { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid #0797a8; }
           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
           .card { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; }
           table { width: 100%; border-collapse: collapse; margin-top: 8px; }
           th, td { padding: 7px; border-bottom: 1px solid #e2e8f0; text-align: left; }
           th { color: #64748b; background: #f8fafc; font-size: 11px; text-transform: uppercase; }
-          .total { margin-top: 12px; color: #0066cc; text-align: right; font-size: 18px; font-weight: 700; }
+          .total { margin-top: 12px; color: #0797a8; text-align: right; font-size: 18px; font-weight: 700; }
         </style>
       </head>
       <body>
         <div class="header">
           <div>
-            <h1>BGBAZAAR Order Details</h1>
+            <h1>BG BAZAAR Order Details</h1>
             <p><strong>Order:</strong> ${escapeHtml(order.orderNumber)}</p>
             <p><strong>Date:</strong> ${escapeHtml(new Date(order.createdAt).toLocaleString("en-IN"))}</p>
+            <p><strong>UTR:</strong> ${escapeHtml(order.utrNumber || "Not provided")}</p>
           </div>
           <div>
             <p><strong>Status:</strong> ${escapeHtml(order.status)}</p>
@@ -437,8 +444,8 @@ function printOrderDetails(orderId) {
             <p><strong>Email:</strong> ${escapeHtml(order.emailAddress)}</p>
           </div>
           <div class="card">
-            <h2>Delivery</h2>
-            <p><strong>Delivery Point Address:</strong></p>
+            <h2>Pickup</h2>
+            <p><strong>Pickup Point:</strong></p>
             <p>${escapeHtml(order.deliveryLocation || DELIVERY_POINT_ADDRESS)}</p>
           </div>
         </div>
@@ -460,7 +467,7 @@ function renderShared() {
     logo.src = settings.logoUrl || DEFAULT_LOGO;
   });
   $$("#siteName").forEach((node) => {
-    node.textContent = settings.siteName || "BGBAZAAR";
+    node.textContent = settings.siteName || "BG BAZAAR";
   });
   $$("#navCartCount").forEach((node) => {
     node.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -833,6 +840,7 @@ function renderOrders() {
               </div>
               <div>
                 <p><strong>Total:</strong> ${money(orderTotal(order))}</p>
+                <p><strong>UTR:</strong> ${escapeHtml(order.utrNumber || "Not provided")}</p>
                 ${proofPreview}
               </div>
             </div>
@@ -1123,10 +1131,10 @@ function attachEvents() {
     }
     const previousSettings = { ...settings };
     settings = {
-      siteName: form.get("siteName").trim() || "BGBAZAAR",
+      siteName: form.get("siteName").trim() || "BG BAZAAR",
       logoUrl,
-      contactPhone: form.get("contactPhone").trim() || "+91 9876543210",
-      contactEmail: form.get("contactEmail").trim() || "contact@bgbazaar.com",
+      contactPhone: form.get("contactPhone").trim() || "9117138483",
+      contactEmail: form.get("contactEmail").trim() || "amaresh.r2030i@iimbg.ac.in",
       upiId: settings.upiId,
       qrImage: settings.qrImage,
       bankDetails: settings.bankDetails
@@ -1267,7 +1275,7 @@ function attachEvents() {
           unitPrice: row.product.price,
           subtotal: row.product.price * row.quantity
         })),
-        utrNumber: "",
+        utrNumber: form.get("utrNumber").trim(),
         paymentProofName: proofFileName(orderNumber, proofType),
         paymentProofType: proofType,
         paymentProofData: proofData,
