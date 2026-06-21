@@ -220,6 +220,10 @@ function orderTotal(order) {
   return Number(order.totalAmount ?? order.total ?? 0);
 }
 
+function isApprovedDeliveredOrder(order) {
+  return order.status === "Delivered" && order.paymentVerificationStatus === "Approved";
+}
+
 function generateOrderNumber() {
   const year = new Date().getFullYear();
   return `BGB-${year}-${String(orders.length + 1).padStart(6, "0")}`;
@@ -616,14 +620,12 @@ function renderDashboard() {
   if (!totalProductsDash || !isAdminLoggedIn) return;
 
   const activeProducts = products.filter((item) => item.listed).length;
-  const unlistedProducts = products.filter((item) => !item.listed).length;
-  const completedOrders = orders.filter((order) => order.status === "Completed");
-  const pendingOrders = orders.filter((order) => order.status !== "Completed" && order.status !== "Cancelled");
+  const completedOrders = orders.filter(isApprovedDeliveredOrder);
+  const pendingOrders = orders.filter((order) => !isApprovedDeliveredOrder(order) && order.status !== "Cancelled");
   const revenue = completedOrders.reduce((sum, order) => sum + orderTotal(order), 0);
 
   totalProductsDash.textContent = products.length;
   $("#activeProductsDash").textContent = activeProducts;
-  $("#unlistedProductsDash").textContent = unlistedProducts;
   $("#totalOrdersDash").textContent = orders.length;
   $("#pendingOrdersDash").textContent = pendingOrders.length;
   $("#completedOrdersDash").textContent = completedOrders.length;
@@ -679,7 +681,7 @@ function renderInventoryTable() {
 function sumRevenue(days) {
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
   return orders
-    .filter((order) => order.status === "Completed" && new Date(order.createdAt).getTime() >= cutoff)
+    .filter((order) => isApprovedDeliveredOrder(order) && new Date(order.createdAt).getTime() >= cutoff)
     .reduce((sum, order) => sum + orderTotal(order), 0);
 }
 
@@ -687,7 +689,7 @@ function renderRevenueTable() {
   const revenueTable = $("#revenueTable");
   if (!revenueTable) return;
   const total = orders
-    .filter((order) => order.status === "Completed")
+    .filter(isApprovedDeliveredOrder)
     .reduce((sum, order) => sum + orderTotal(order), 0);
   revenueTable.innerHTML = `
     <table>
@@ -968,7 +970,6 @@ function attachEvents() {
     if (paymentStatusId) {
       const order = orders.find((item) => item.id === paymentStatusId);
       order.paymentVerificationStatus = event.target.value;
-      if (event.target.value === "Approved") order.status = "Payment Verified";
       if (event.target.value === "Rejected") order.status = "Pending Payment";
       if (event.target.value === "Resubmission Requested") order.status = "Pending Payment";
     }
