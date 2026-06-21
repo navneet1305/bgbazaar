@@ -862,7 +862,8 @@ function attachEvents() {
 
   $("#brandingForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const brandingForm = event.currentTarget;
+    const form = new FormData(brandingForm);
     const logoFile = form.get("logoFile");
     let logoUrl = settings.logoUrl || DEFAULT_LOGO;
     try {
@@ -899,13 +900,14 @@ function attachEvents() {
       alert(STORAGE_WARNING);
       return;
     }
-    event.currentTarget.elements.logoFile.value = "";
+    brandingForm.elements.logoFile.value = "";
     renderAll();
   });
 
   $("#settingsForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const settingsForm = event.currentTarget;
+    const form = new FormData(settingsForm);
     const qrFile = form.get("qrImage");
     let qrImage = settings.qrImage;
     try {
@@ -930,7 +932,7 @@ function attachEvents() {
       alert(STORAGE_WARNING);
       return;
     }
-    event.currentTarget.elements.qrImage.value = "";
+    settingsForm.elements.qrImage.value = "";
     alert("Payment settings updated successfully!");
     renderAll();
   });
@@ -973,6 +975,7 @@ function attachEvents() {
 
   $("#paymentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const paymentForm = event.currentTarget;
     const checkoutMessage = $("#checkoutMessage");
     const submitButton = $("#submitOrderBtn");
     const rows = getCartRows();
@@ -984,7 +987,7 @@ function attachEvents() {
       return;
     }
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(paymentForm);
     const proof = form.get("paymentProof");
     if (!acceptedProofFile(proof)) {
       checkoutMessage.textContent = "Upload payment proof as JPG, JPEG, PNG, WebP, or PDF.";
@@ -1052,7 +1055,7 @@ function attachEvents() {
         throw new Error(STORAGE_WARNING);
       }
 
-      event.currentTarget.reset();
+      paymentForm.reset();
       checkoutMessage.textContent = `Order ${order.orderNumber} submitted. Redirecting...`;
       renderAll();
       setTimeout(() => {
