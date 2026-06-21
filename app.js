@@ -1,9 +1,11 @@
-const ADMIN_USERNAME = "amaresh@bgbazaar.com";
+import { db, ref, set, get, child, remove, onValue, update, push } from "./firebase.js";
+
+const ADMIN_EMAIL = "amaresh@bgbazaar.com";
 const ADMIN_PASSWORD = "amareshraj@1321";
+
 const LOW_STOCK_THRESHOLD = 5;
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_BYTES = 1.5 * 1024 * 1024;
-const ORDERS_RESET_VERSION = "2026-06-21-order-management-clean-start";
 const STORAGE_WARNING =
   "Browser storage is full. Use a smaller image or remove older orders before trying again.";
 const DELIVERY_POINT_ADDRESS = "BgBazaar Office";
@@ -82,12 +84,6 @@ let isAdminLoggedIn = sessionStorage.getItem("bgbazaar_admin") === "true";
 let activeAdminPanel = "dashboardOverview";
 let sharedBackendReady = false;
 
-if (localStorage.getItem("bgbazaar_orders_reset_version") !== ORDERS_RESET_VERSION) {
-  orders = [];
-  localStorage.setItem("bgbazaar_orders_reset_version", ORDERS_RESET_VERSION);
-  localStorage.setItem("bgbazaar_orders", JSON.stringify(orders));
-}
-
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -110,22 +106,96 @@ function save() {
   }
 }
 
-async function sharedRequest(action, data = null, admin = false) {
-  const response = await fetch("/api/store", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action,
-      data,
-      ...(admin ? { username: ADMIN_USERNAME, password: ADMIN_PASSWORD } : {})
-    })
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(result.error || "Shared data service is unavailable.");
+async function dbSave(path, data) {
+  try {
+    if (data.id) {
+      await set(ref(db, path + "/" + data.id), data);
+    } else {
+      const newRef = push(ref(db, path));
+      data.id = newRef.key;
+      await set(newRef, data);
+    }
+    return data;
+  } catch (error) {
+    throw new Error("Failed to save data: " + error.message);
   }
-  sharedBackendReady = true;
-  return result.data;
+}
+
+async function dbGet(path) {
+  const snapshot = await get(ref(db, path));
+  return snapshot.exists() ? snapshot.val() : null;
+}
+
+async function dbGetAll(path) {
+  const snapshot = await get(ref(db, path));
+  if (!snapshot.exists()) return [];
+  const data = snapshot.val();
+  return Object.values(data || {});
+}
+
+async function dbDelete(path) {
+  await remove(ref(db, path));
+}
+
+async function dbUpdate(path, data) {
+  await update(ref(db, path), data);
+  return data;
+}
+
+async function subscribeToCollection(path, callback) {
+  onValue(ref(db, path), (snapshot) => {
+    const data = snapshot.val();
+    callback(data ? Object.values(data) : []);
+  }, (error) => {
+    console.error("Realtime subscription error:", error);
+  });
+}
+
+async function saveCategory(category) {
+  return dbSave("categories", category);
+}
+
+async function saveProduct(product) {
+  return dbSave("products", product);
+}
+
+async function saveSettings(settingsData) {
+  await set(ref(db, "settings"), settingsData);
+  return settingsData;
+}
+
+async function saveOrder(order) {
+  return dbSave("orders", order);
+}
+
+async function deleteCategory(id) {
+  await dbDelete("categories/" + id);
+}
+
+async function deleteProduct(id) {
+  await dbDelete("products/" + id);
+}
+
+async function deleteOrder(id) {
+  await dbDelete("orders/" + id);
+}
+
+async function createOrder(order) {
+  const productsData = await dbGetAll("products");
+  const changedProducts = [];
+  for (const item of order.items || []) {
+    const product = productsData.find((p) => p.id === item.productId);
+    if (!product) throw new Error(`${item.name || "A product"} is no longer available.`);
+    const remaining = Number(product.totalStock || 0) - Number(product.soldQuantity || 0);
+    if (remaining < Number(item.quantity || 0)) {
+      throw new Error(`${product.name} does not have enough stock.`);
+    }
+    product.soldQuantity = Number(product.soldQuantity || 0) + Number(item.quantity || 0);
+    changedProducts.push(product);
+  }
+  await Promise.all(changedProducts.map(saveProduct));
+  const savedOrder = await saveOrder(order);
+  return { order: savedOrder, products: changedProducts };
 }
 
 function applySharedState(data, includeOrders = false) {
@@ -138,78 +208,42 @@ function applySharedState(data, includeOrders = false) {
   renderAll();
 }
 
-function recordKey(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-async function reconcileLocalAdminState(remoteData, localSnapshot) {
-  if (!remoteData || !localSnapshot) return remoteData;
-  const remoteCategories = Array.isArray(remoteData.categories) ? remoteData.categories : [];
-  const remoteProducts = Array.isArray(remoteData.products) ? remoteData.products : [];
-  const categoryKeys = new Set(remoteCategories.map((category) => recordKey(category.name)));
-  const productIds = new Set(remoteProducts.map((product) => product.id));
-  const productKeys = new Set(remoteProducts.map((product) => recordKey(product.name)));
-  const syncedCategories = [];
-  const syncedProducts = [];
-
-  for (const category of localSnapshot.categories || []) {
-    if (!categoryKeys.has(recordKey(category.name))) {
-      const savedCategory = await sharedRequest("saveCategory", category, true);
-      syncedCategories.push(savedCategory || category);
-      categoryKeys.add(recordKey(category.name));
-    }
-  }
-
-  for (const product of localSnapshot.products || []) {
-    const isMissingProduct = !productIds.has(product.id) && !productKeys.has(recordKey(product.name));
-    if (isMissingProduct) {
-      const savedProduct = await sharedRequest("saveProduct", product, true);
-      syncedProducts.push(savedProduct || product);
-      productIds.add(product.id);
-      productKeys.add(recordKey(product.name));
-    }
-  }
-
-  if (!syncedCategories.length && !syncedProducts.length) return remoteData;
-  return sharedRequest("getAdminState", null, true);
-}
-
 async function hydrateSharedState(includeOrders = isAdminLoggedIn) {
   try {
-    const localSnapshot = {
-      categories: [...categories],
-      products: [...products],
-      settings: { ...settings }
-    };
-    let data;
-    if (includeOrders) {
-      data = await sharedRequest("getAdminState", null, true);
-    } else {
-      const response = await fetch("/api/store", { cache: "no-store" });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "Shared data service is unavailable.");
-      data = result.data;
-      sharedBackendReady = true;
-    }
-
-    if (!data?.settings) {
-      data = await sharedRequest("bootstrap", { categories, products, settings });
-    }
-    if (includeOrders && isAdminLoggedIn) {
-      data = await reconcileLocalAdminState(data, localSnapshot);
-    }
-    applySharedState(data, includeOrders);
+    const [categoriesData, productsData, settingsData, ordersData] = await Promise.all([
+      dbGetAll("categories"),
+      dbGetAll("products"),
+      dbGet("settings"),
+      includeOrders ? dbGetAll("orders") : Promise.resolve([])
+    ]);
+    applySharedState({
+      categories: categoriesData,
+      products: productsData,
+      settings: settingsData,
+      orders: ordersData
+    }, includeOrders);
+    sharedBackendReady = true;
   } catch (error) {
     sharedBackendReady = false;
-    console.warn("Using local cache until shared storage is available:", error.message);
+    console.warn("Using local cache until Firebase is available:", error.message);
   }
 }
 
 async function persistShared(action, data, admin = true) {
   try {
-    return await sharedRequest(action, data, admin);
+    switch (action) {
+      case "saveCategory": return await saveCategory(data);
+      case "saveProduct": return await saveProduct(data);
+      case "saveSettings": return await saveSettings(data);
+      case "saveOrder": return await saveOrder(data);
+      case "deleteCategory": return await deleteCategory(data.id);
+      case "deleteProduct": return await deleteProduct(data.id);
+      case "deleteOrder": return await deleteOrder(data.id);
+      case "createOrder": return await createOrder(data);
+      default: throw new Error("Unknown action: " + action);
+    }
   } catch (error) {
-    alert(`${error.message} Your change was not shared. Please try again.`);
+    alert(error.message || "Operation failed. Please try again.");
     await hydrateSharedState(isAdminLoggedIn);
     throw error;
   }
@@ -1483,9 +1517,9 @@ function attachEvents() {
       };
 
       checkoutMessage.textContent = "Saving order securely...";
-      const sharedOrderResult = await sharedRequest("createOrder", order, false);
-      const savedOrder = sharedOrderResult?.order || order;
-      const changedProducts = sharedOrderResult?.products || [];
+      const result = await createOrder(order);
+      const savedOrder = result?.order || order;
+      const changedProducts = result?.products || [];
       const previousProducts = products;
       const previousOrders = orders;
       const previousCart = cart;
@@ -1523,17 +1557,19 @@ function attachEvents() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const loginMessage = $("#loginMessage");
-    if (form.get("username") === ADMIN_USERNAME && form.get("password") === ADMIN_PASSWORD) {
+    const username = form.get("username").trim();
+    const password = form.get("password").trim();
+    
+    if (username === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       isAdminLoggedIn = true;
       sessionStorage.setItem("bgbazaar_admin", "true");
       event.currentTarget.reset();
-      loginMessage.textContent = "Loading shared dashboard data...";
+      loginMessage.textContent = "Loading dashboard data...";
       await hydrateSharedState(true);
-      loginMessage.textContent = sharedBackendReady
-        ? ""
-        : "Signed in using local cache. Connect Vercel Blob to sync live orders and products.";
+      loginMessage.textContent = "";
       renderAll();
     } else {
+      isAdminLoggedIn = false;
       loginMessage.textContent = "Invalid admin username or password.";
     }
   });
@@ -1542,7 +1578,6 @@ function attachEvents() {
     isAdminLoggedIn = false;
     sessionStorage.removeItem("bgbazaar_admin");
     renderAll();
-    hydrateSharedState(false);
   });
 
   $("#clearCartBtn")?.addEventListener("click", () => {
@@ -1570,9 +1605,36 @@ function attachEvents() {
   });
 }
 
+function setupRealtimeListeners() {
+  onValue(ref(db, "categories"), (snapshot) => {
+    const data = snapshot.val();
+    categories = data ? Object.values(data) : [];
+    save();
+    renderAll();
+  });
+  onValue(ref(db, "products"), (snapshot) => {
+    const data = snapshot.val();
+    products = migrateProducts(data ? Object.values(data) : []);
+    save();
+    renderAll();
+  });
+  onValue(ref(db, "settings"), (snapshot) => {
+    if (snapshot.exists()) {
+      settings = normalizeSettings(snapshot.val());
+      save();
+      renderAll();
+    }
+  });
+  onValue(ref(db, "orders"), (snapshot) => {
+    const data = snapshot.val();
+    if (data && isAdminLoggedIn) {
+      orders = migrateOrders(Object.values(data));
+      save();
+      renderAll();
+    }
+  });
+}
+
 attachEvents();
 renderAll();
-hydrateSharedState(isAdminLoggedIn);
-setInterval(() => {
-  if (!document.hidden) hydrateSharedState(isAdminLoggedIn);
-}, 15000);
+setupRealtimeListeners();
