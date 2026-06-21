@@ -18,17 +18,17 @@ const ORDER_STATUSES = [
   "Cancelled"
 ];
 const initialCategories = [
-  { id: crypto.randomUUID(), name: "Electronics", description: "Electronic devices and gadgets" },
-  { id: crypto.randomUUID(), name: "Fashion", description: "Clothing and accessories" },
-  { id: crypto.randomUUID(), name: "Home & Kitchen", description: "Home appliances and kitchen essentials" },
-  { id: crypto.randomUUID(), name: "Beauty", description: "Beauty and personal care products" },
-  { id: crypto.randomUUID(), name: "Books", description: "Books and reading materials" },
-  { id: crypto.randomUUID(), name: "Sports", description: "Sports and fitness equipment" }
+  { id: "cat-electronics", name: "Electronics", description: "Electronic devices and gadgets" },
+  { id: "cat-fashion", name: "Fashion", description: "Clothing and accessories" },
+  { id: "cat-home-kitchen", name: "Home & Kitchen", description: "Home appliances and kitchen essentials" },
+  { id: "cat-beauty", name: "Beauty", description: "Beauty and personal care products" },
+  { id: "cat-books", name: "Books", description: "Books and reading materials" },
+  { id: "cat-sports", name: "Sports", description: "Sports and fitness equipment" }
 ];
 
 const initialProducts = [
   {
-    id: crypto.randomUUID(),
+    id: "prod-daily-grocery-pack",
     name: "Daily Grocery Pack",
     description: "Rice, pulses, spices, and essentials for everyday cooking.",
     category: "Home & Kitchen",
@@ -40,7 +40,7 @@ const initialProducts = [
     createdAt: new Date().toISOString()
   },
   {
-    id: crypto.randomUUID(),
+    id: "prod-cotton-tshirt",
     name: "Cotton T-shirt",
     description: "Soft cotton regular-fit T-shirt for daily wear.",
     category: "Fashion",
@@ -52,7 +52,7 @@ const initialProducts = [
     createdAt: new Date().toISOString()
   },
   {
-    id: crypto.randomUUID(),
+    id: "prod-kitchen-storage-set",
     name: "Kitchen Storage Set",
     description: "Airtight containers for grains, snacks, and spices.",
     category: "Home & Kitchen",
@@ -138,8 +138,49 @@ function applySharedState(data, includeOrders = false) {
   renderAll();
 }
 
+function recordKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function reconcileLocalAdminState(remoteData, localSnapshot) {
+  if (!remoteData || !localSnapshot) return remoteData;
+  const remoteCategories = Array.isArray(remoteData.categories) ? remoteData.categories : [];
+  const remoteProducts = Array.isArray(remoteData.products) ? remoteData.products : [];
+  const categoryKeys = new Set(remoteCategories.map((category) => recordKey(category.name)));
+  const productIds = new Set(remoteProducts.map((product) => product.id));
+  const productKeys = new Set(remoteProducts.map((product) => recordKey(product.name)));
+  const syncedCategories = [];
+  const syncedProducts = [];
+
+  for (const category of localSnapshot.categories || []) {
+    if (!categoryKeys.has(recordKey(category.name))) {
+      const savedCategory = await sharedRequest("saveCategory", category, true);
+      syncedCategories.push(savedCategory || category);
+      categoryKeys.add(recordKey(category.name));
+    }
+  }
+
+  for (const product of localSnapshot.products || []) {
+    const isMissingProduct = !productIds.has(product.id) && !productKeys.has(recordKey(product.name));
+    if (isMissingProduct) {
+      const savedProduct = await sharedRequest("saveProduct", product, true);
+      syncedProducts.push(savedProduct || product);
+      productIds.add(product.id);
+      productKeys.add(recordKey(product.name));
+    }
+  }
+
+  if (!syncedCategories.length && !syncedProducts.length) return remoteData;
+  return sharedRequest("getAdminState", null, true);
+}
+
 async function hydrateSharedState(includeOrders = isAdminLoggedIn) {
   try {
+    const localSnapshot = {
+      categories: [...categories],
+      products: [...products],
+      settings: { ...settings }
+    };
     let data;
     if (includeOrders) {
       data = await sharedRequest("getAdminState", null, true);
@@ -153,6 +194,9 @@ async function hydrateSharedState(includeOrders = isAdminLoggedIn) {
 
     if (!data?.settings) {
       data = await sharedRequest("bootstrap", { categories, products, settings });
+    }
+    if (includeOrders && isAdminLoggedIn) {
+      data = await reconcileLocalAdminState(data, localSnapshot);
     }
     applySharedState(data, includeOrders);
   } catch (error) {
