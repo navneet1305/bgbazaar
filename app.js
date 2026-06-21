@@ -308,20 +308,6 @@ function downloadOrdersCsv() {
   URL.revokeObjectURL(url);
 }
 
-function clearOrders() {
-  if (!orders.length) {
-    alert("No orders available to clear.");
-    return;
-  }
-  if (!confirm("Delete all saved orders from Order Management? Inventory counts will stay unchanged.")) return;
-  orders = [];
-  if (!save()) {
-    alert("Orders could not be cleared. Please try again.");
-    return;
-  }
-  renderAll();
-}
-
 function openPaymentProof(orderId) {
   const order = orders.find((item) => item.id === orderId);
   if (!order || !order.paymentProofData || order.paymentProofData === "#") {
@@ -793,6 +779,7 @@ function renderOrders() {
                   ).join("")}
                 </select>
               </label>
+              <button class="danger-btn" type="button" data-delete-order="${escapeHtml(order.id)}">Delete Order</button>
             </div>
           </article>
         `;
@@ -996,10 +983,14 @@ function attachEvents() {
   $("#ordersList")?.addEventListener("click", (event) => {
     const proofButton = event.target.closest("[data-proof-open]");
     if (proofButton) openPaymentProof(proofButton.dataset.proofOpen);
+    const deleteButton = event.target.closest("[data-delete-order]");
+    if (deleteButton && confirm("Delete this order from Order Management? Inventory counts will stay unchanged.")) {
+      orders = orders.filter((order) => order.id !== deleteButton.dataset.deleteOrder);
+      renderAll();
+    }
   });
 
   $("#downloadOrdersCsv")?.addEventListener("click", downloadOrdersCsv);
-  $("#clearOrdersBtn")?.addEventListener("click", clearOrders);
 
   $("#productForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
