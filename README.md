@@ -22,7 +22,7 @@ BGBAZAAR is a simple yet professional e-commerce website where:
 ✅ Order confirmation and tracking  
 
 ### For Admins
-✅ Secure login with credentials (admin/admin123)  
+✅ Secure login with the BG BAZAAR admin credentials
 ✅ Dashboard with KPIs:
   - Total Products
   - Total Orders
@@ -90,16 +90,19 @@ bgbazaar/
 
 ## 🚀 Getting Started
 
-### Option 1: Frontend Only (Current Implementation)
-No setup required! All data is stored locally in the browser:
+### Option 1: Vercel Live Site
 
-1. Open `index.html` in your web browser
+The live site uses Vercel Functions plus Vercel Blob so products, settings, orders, and payment proofs stay shared across browsers.
+
+1. Connect a Vercel Blob store to the Vercel project
+2. Redeploy the site after Vercel adds `BLOB_READ_WRITE_TOKEN`
+3. Open `index.html` in your web browser
 2. Browse products
 3. Add to cart and checkout
 4. For admin access, go to admin.html
-5. Login with: **admin / admin123**
+5. Login with: **amaresh@bgbazaar.com / amareshraj@1321**
 
-**Note:** Data is stored in browser localStorage and will persist across sessions on the same device/browser.
+**Note:** Cart data stays local to each visitor, but products, categories, admin settings, orders, and uploaded proof files sync through Vercel Blob.
 
 ### Option 2: With Backend (PHP + MySQL)
 
@@ -186,19 +189,19 @@ No setup required! All data is stored locally in the browser:
 ## 🔐 Admin Login
 
 **Credentials:**
-- Username: `admin`
-- Password: `admin123`
+- Username: `amaresh@bgbazaar.com`
+- Password: `amareshraj@1321`
 
 **To change password (future enhancement):**
-Update `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `app.js`
+Update `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `app.js` and configure matching Vercel environment variables for the API.
 
 ---
 
 ## 💾 Data Storage
 
-### Current Implementation (localStorage)
-- **Pros:** No backend needed, fast, works offline
-- **Cons:** Data lost if localStorage is cleared, single device
+### Current Implementation (Vercel Blob)
+- **Pros:** Shared across browsers, stores uploaded proof files, works on Vercel without a separate server
+- **Cons:** Requires a connected Vercel Blob store and `BLOB_READ_WRITE_TOKEN`
 
 ### Future Implementation (MySQL)
 - **Pros:** Persistent, multi-device, scalable

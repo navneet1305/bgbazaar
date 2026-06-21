@@ -1112,45 +1112,79 @@ function attachEvents() {
     }
   });
 
-  $("#adminList")?.addEventListener("click", (event) => {
+  $("#adminList")?.addEventListener("click", async (event) => {
     const { edit, toggle, delete: deleteId } = event.target.dataset;
     if (edit) fillProductForm(edit);
     if (toggle) {
       const item = products.find((product) => product.id === toggle);
+      if (!item) return;
+      const previousListed = item.listed;
       item.listed = !item.listed;
-      renderAll();
+      try {
+        const savedProduct = await persistShared("saveProduct", item);
+        if (savedProduct) {
+          products = products.map((product) => (product.id === item.id ? savedProduct : product));
+        }
+        renderAll();
+      } catch (error) {
+        item.listed = previousListed;
+        renderAll();
+      }
     }
     if (deleteId && confirm("Delete this product permanently?")) {
+      const previousProducts = products;
+      const previousCart = cart;
       products = products.filter((product) => product.id !== deleteId);
       cart = cart.filter((item) => item.id !== deleteId);
-      renderAll();
+      try {
+        await persistShared("deleteProduct", { id: deleteId });
+        renderAll();
+      } catch (error) {
+        products = previousProducts;
+        cart = previousCart;
+        renderAll();
+      }
     }
   });
 
-  $("#ordersList")?.addEventListener("change", (event) => {
+  $("#ordersList")?.addEventListener("change", async (event) => {
     const orderStatusId = event.target.dataset.orderStatus;
     if (orderStatusId) {
       const order = orders.find((item) => item.id === orderStatusId);
+      if (!order) return;
+      const previousStatus = order.status;
       order.status = event.target.value;
+      try {
+        await persistShared("saveOrder", order);
+      } catch (error) {
+        order.status = previousStatus;
+      }
     }
     renderAll();
   });
 
-  $("#ordersList")?.addEventListener("click", (event) => {
+  $("#ordersList")?.addEventListener("click", async (event) => {
     const proofButton = event.target.closest("[data-proof-open]");
     if (proofButton) openPaymentProof(proofButton.dataset.proofOpen);
     const printButton = event.target.closest("[data-print-order]");
     if (printButton) printOrderDetails(printButton.dataset.printOrder);
     const deleteButton = event.target.closest("[data-delete-order]");
     if (deleteButton && confirm("Delete this order from Order Management? Inventory counts will stay unchanged.")) {
+      const previousOrders = orders;
       orders = orders.filter((order) => order.id !== deleteButton.dataset.deleteOrder);
-      renderAll();
+      try {
+        await persistShared("deleteOrder", { id: deleteButton.dataset.deleteOrder });
+        renderAll();
+      } catch (error) {
+        orders = previousOrders;
+        renderAll();
+      }
     }
   });
 
   $("#downloadOrdersCsv")?.addEventListener("click", downloadOrdersCsv);
 
-  $("#productForm")?.addEventListener("submit", (event) => {
+  $("#productForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const productForm = event.currentTarget;
     const form = new FormData(productForm);
@@ -1171,21 +1205,32 @@ function attachEvents() {
       createdAt: existing ? existing.createdAt : new Date().toISOString()
     };
 
-    products = existing
-      ? products.map((item) => (item.id === id ? product : item))
-      : [...products, product];
+    const previousProducts = products;
+    const previousCart = cart;
 
-    cart = cart
-      .map((item) => {
-        const updated = products.find((productItem) => productItem.id === item.id);
-        return updated
-          ? { ...item, quantity: Math.min(item.quantity, remainingStock(updated)) }
-          : item;
-      })
-      .filter((item) => item.quantity > 0);
+    try {
+      const savedProduct = await persistShared("saveProduct", product);
+      const finalProduct = savedProduct || product;
+      products = existing
+        ? products.map((item) => (item.id === id ? finalProduct : item))
+        : [...products, finalProduct];
 
-    resetProductForm();
-    renderAll();
+      cart = cart
+        .map((item) => {
+          const updated = products.find((productItem) => productItem.id === item.id);
+          return updated
+            ? { ...item, quantity: Math.min(item.quantity, remainingStock(updated)) }
+            : item;
+        })
+        .filter((item) => item.quantity > 0);
+
+      resetProductForm();
+      renderAll();
+    } catch (error) {
+      products = previousProducts;
+      cart = previousCart;
+      renderAll();
+    }
   });
 
   $("#brandingForm")?.addEventListener("submit", async (event) => {
@@ -1228,8 +1273,16 @@ function attachEvents() {
       alert(STORAGE_WARNING);
       return;
     }
-    brandingForm.elements.logoFile.value = "";
-    renderAll();
+    try {
+      const savedSettings = await persistShared("saveSettings", settings);
+      settings = normalizeSettings(savedSettings || settings);
+      brandingForm.elements.logoFile.value = "";
+      renderAll();
+    } catch (error) {
+      settings = previousSettings;
+      save();
+      renderAll();
+    }
   });
 
   $("#settingsForm")?.addEventListener("submit", async (event) => {
@@ -1260,12 +1313,20 @@ function attachEvents() {
       alert(STORAGE_WARNING);
       return;
     }
-    settingsForm.elements.qrImage.value = "";
-    alert("Payment settings updated successfully!");
-    renderAll();
+    try {
+      const savedSettings = await persistShared("saveSettings", settings);
+      settings = normalizeSettings(savedSettings || settings);
+      settingsForm.elements.qrImage.value = "";
+      alert("Payment settings updated successfully!");
+      renderAll();
+    } catch (error) {
+      settings = previousSettings;
+      save();
+      renderAll();
+    }
   });
 
-  $("#categoryForm")?.addEventListener("submit", (event) => {
+  $("#categoryForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const id = form.get("categoryId") || crypto.randomUUID();
@@ -1277,25 +1338,36 @@ function attachEvents() {
       description: form.get("categoryDescription").trim()
     };
 
-    if (existing) {
-      const index = categories.indexOf(existing);
-      categories[index] = category;
-    } else {
-      categories.push(category);
+    const previousCategories = categories;
+    try {
+      const savedCategory = await persistShared("saveCategory", category);
+      const finalCategory = savedCategory || category;
+      categories = existing
+        ? categories.map((item) => (item.id === id ? finalCategory : item))
+        : [...categories, finalCategory];
+      resetCategoryForm();
+      renderAll();
+    } catch (error) {
+      categories = previousCategories;
+      renderAll();
     }
-
-    resetCategoryForm();
-    renderAll();
   });
 
-  $("#categoriesList")?.addEventListener("click", (event) => {
+  $("#categoriesList")?.addEventListener("click", async (event) => {
     const editId = event.target.dataset.editCategory;
     const deleteId = event.target.dataset.deleteCategory;
     
     if (editId) fillCategoryForm(editId);
     if (deleteId && confirm("Delete this category? Products in this category will not be affected.")) {
+      const previousCategories = categories;
       categories = categories.filter((c) => c.id !== deleteId);
-      renderAll();
+      try {
+        await persistShared("deleteCategory", { id: deleteId });
+        renderAll();
+      } catch (error) {
+        categories = previousCategories;
+        renderAll();
+      }
     }
   });
 
@@ -1366,14 +1438,18 @@ function attachEvents() {
         paymentSubmittedAt: now
       };
 
+      checkoutMessage.textContent = "Saving order securely...";
+      const sharedOrderResult = await sharedRequest("createOrder", order, false);
+      const savedOrder = sharedOrderResult?.order || order;
+      const changedProducts = sharedOrderResult?.products || [];
       const previousProducts = products;
       const previousOrders = orders;
       const previousCart = cart;
       products = products.map((product) => {
-        const row = rows.find((item) => item.id === product.id);
-        return row ? { ...product, soldQuantity: product.soldQuantity + row.quantity } : product;
+        const changedProduct = changedProducts.find((item) => item.id === product.id);
+        return changedProduct || product;
       });
-      orders = [...orders, order];
+      orders = [...orders.filter((item) => item.id !== savedOrder.id), savedOrder];
       cart = [];
 
       if (!save()) {
@@ -1385,7 +1461,7 @@ function attachEvents() {
       }
 
       paymentForm.reset();
-      checkoutMessage.textContent = `Order ${order.orderNumber} submitted. Redirecting...`;
+      checkoutMessage.textContent = `Order ${savedOrder.orderNumber} submitted. Redirecting...`;
       renderAll();
       setTimeout(() => {
         window.location.href = "order-success.html";
@@ -1399,7 +1475,7 @@ function attachEvents() {
     }
   });
 
-  $("#loginForm")?.addEventListener("submit", (event) => {
+  $("#loginForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const loginMessage = $("#loginMessage");
@@ -1407,7 +1483,11 @@ function attachEvents() {
       isAdminLoggedIn = true;
       sessionStorage.setItem("bgbazaar_admin", "true");
       event.currentTarget.reset();
-      loginMessage.textContent = "";
+      loginMessage.textContent = "Loading shared dashboard data...";
+      await hydrateSharedState(true);
+      loginMessage.textContent = sharedBackendReady
+        ? ""
+        : "Signed in using local cache. Connect Vercel Blob to sync live orders and products.";
       renderAll();
     } else {
       loginMessage.textContent = "Invalid admin username or password.";
@@ -1418,6 +1498,7 @@ function attachEvents() {
     isAdminLoggedIn = false;
     sessionStorage.removeItem("bgbazaar_admin");
     renderAll();
+    hydrateSharedState(false);
   });
 
   $("#clearCartBtn")?.addEventListener("click", () => {
@@ -1447,3 +1528,7 @@ function attachEvents() {
 
 attachEvents();
 renderAll();
+hydrateSharedState(isAdminLoggedIn);
+setInterval(() => {
+  if (!document.hidden) hydrateSharedState(isAdminLoggedIn);
+}, 15000);

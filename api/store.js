@@ -1,8 +1,17 @@
 import { del, list, put } from "@vercel/blob";
 
 const ROOT = "bgbazaar";
+const ORDERS_RESET_VERSION = "2026-06-21-order-management-clean-start";
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "amaresh@bgbazaar.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "amareshraj@1321";
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "4mb"
+    }
+  }
+};
 
 function respond(response, status, data) {
   response.status(status).setHeader("Cache-Control", "no-store").json(data);
@@ -50,6 +59,32 @@ async function writeJson(pathname, value) {
   return value;
 }
 
+async function deleteRecords(type) {
+  let cursor;
+  do {
+    const page = await list({ prefix: `${ROOT}/${type}/`, cursor, limit: 1000 });
+    if (page.blobs.length) {
+      await Promise.all(page.blobs.map((blob) => del(blob.url)));
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+}
+
+async function ensureOrdersReset() {
+  const metaPath = `${ROOT}/meta/orders-reset.json`;
+  const resetMeta = await readSingle(metaPath);
+  if (resetMeta?.version === ORDERS_RESET_VERSION) return;
+  await deleteRecords("orders");
+  await writeJson(`${ROOT}/meta/order-counter.json`, {
+    lastOrderNumber: 0,
+    resetAt: new Date().toISOString()
+  });
+  await writeJson(metaPath, {
+    version: ORDERS_RESET_VERSION,
+    resetAt: new Date().toISOString()
+  });
+}
+
 async function saveDataImage(dataUrl, folder, filename) {
   if (!String(dataUrl || "").startsWith("data:")) return dataUrl || "";
   const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
@@ -75,6 +110,7 @@ async function getPublicState() {
 }
 
 async function getAdminState() {
+  await ensureOrdersReset();
   const [publicState, orders] = await Promise.all([getPublicState(), listRecords("orders")]);
   return { ...publicState, orders };
 }
@@ -97,7 +133,16 @@ async function saveSettings(settings) {
 }
 
 async function createOrder(order) {
+  await ensureOrdersReset();
   const saved = { ...order };
+  const counterPath = `${ROOT}/meta/order-counter.json`;
+  const counter = await readSingle(counterPath);
+  const nextOrderNumber = Number(counter?.lastOrderNumber || 0) + 1;
+  const year = new Date().getFullYear();
+  saved.orderNumber = `BGB-${year}-${String(nextOrderNumber).padStart(6, "0")}`;
+  saved.paymentProofName = saved.paymentProofName
+    ? saved.paymentProofName.replace(/^BGB-\d{4}-\d{6}/, saved.orderNumber)
+    : `${saved.orderNumber}.${saved.paymentProofType === "application/pdf" ? "pdf" : "jpg"}`;
   saved.paymentProofData = await saveDataImage(
     saved.paymentProofData,
     "payment-proofs",
@@ -119,6 +164,10 @@ async function createOrder(order) {
 
   await Promise.all(changedProducts.map(saveProduct));
   await writeJson(`${ROOT}/orders/${safeId(saved.id)}.json`, saved);
+  await writeJson(counterPath, {
+    lastOrderNumber: nextOrderNumber,
+    updatedAt: new Date().toISOString()
+  });
   return { order: saved, products: changedProducts };
 }
 

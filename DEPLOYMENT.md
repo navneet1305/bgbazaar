@@ -12,7 +12,7 @@
 - ✅ **admin.html** - Complete admin dashboard with all management features
 
 #### Admin Features
-- ✅ Admin Login (admin/admin123)
+- ✅ Admin Login (amaresh@bgbazaar.com / amareshraj@1321)
 - ✅ Dashboard with 7 KPIs
 - ✅ Product Management (Create, Read, Update, Delete, List/Unlist)
 - ✅ **Category Management** (NEW - Create, Read, Update, Delete)
@@ -44,7 +44,7 @@
 - ✅ Smooth animations and transitions
 
 #### Data Management
-- ✅ localStorage persistence (no backend required)
+- ✅ Vercel Blob shared persistence for products, settings, orders, and uploaded proof files
 - ✅ Cart persistence across sessions
 - ✅ Order history
 - ✅ Category management
@@ -128,7 +128,7 @@ https://yourdomain.com/bgbazaar/
 2. Add to cart
 3. View cart
 4. Proceed to checkout
-5. Access admin panel (admin/admin123)
+5. Access admin panel (amaresh@bgbazaar.com / amareshraj@1321)
 6. Create a test product
 7. Place a test order
 
@@ -139,25 +139,15 @@ https://yourdomain.com/bgbazaar/
 
 ---
 
-### Step 4 (Optional): Setup Backend
+### Step 4: Setup Vercel Blob
 
-Once frontend is working, optionally integrate PHP backend:
-
-**Files to create:**
-```
-api/
-├── config.php
-├── products.php
-├── categories.php
-├── orders.php
-└── settings.php
-```
+For the live Vercel site, connect Vercel Blob before taking real orders:
 
 **Steps:**
-1. Create `api/` folder
-2. Upload `config.php` with database credentials
-3. Create PHP endpoints (see example below)
-4. Update `app.js` to use fetch() instead of localStorage
+1. Open the Vercel project dashboard
+2. Add a Vercel Blob store from Storage
+3. Confirm `BLOB_READ_WRITE_TOKEN` is attached to the project
+4. Redeploy the project
 
 ---
 
@@ -169,7 +159,7 @@ api/
 - [ ] Add to cart works
 - [ ] Cart calculations correct
 - [ ] Checkout form submits
-- [ ] Admin login works (admin/admin123)
+- [ ] Admin login works (amaresh@bgbazaar.com / amareshraj@1321)
 - [ ] Can create products
 - [ ] Can create categories
 - [ ] Can update order status
@@ -185,7 +175,7 @@ api/
 
 ## 🔐 Security Checklist
 
-- [ ] Update admin password (change from "admin123")
+- [ ] Store admin credentials in Vercel environment variables before production use
 - [ ] Use HTTPS (SSL certificate)
 - [ ] Set up regular backups
 - [ ] Limit admin access by IP (if possible)
@@ -246,7 +236,7 @@ api/
 
 ### Issue: Admin login not working
 **Solution:**
-- Verify credentials: admin / admin123
+- Verify credentials: amaresh@bgbazaar.com / amareshraj@1321
 - Check if cookies are enabled
 - Try in incognito mode
 - Clear browser cache and cookies
