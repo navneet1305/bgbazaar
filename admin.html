@@ -249,7 +249,16 @@
               </section>
 
               <section id="orderHistory" class="admin-panel hidden" data-admin-panel="orderHistory">
-                <h3>Order Management</h3>
+                <div class="panel-heading order-heading">
+                  <div>
+                    <p class="eyebrow">Customer Orders</p>
+                    <h3>Order Management</h3>
+                  </div>
+                  <div class="order-tools">
+                    <a id="ordersSheetLink" class="ghost-btn" href="https://docs.google.com/spreadsheets/d/1MqYYu7vkNXSjGTFE1egKOTeBQqCN4TTicZQvxP2wBv8/edit?usp=drivesdk" target="_blank" rel="noreferrer">Open Google Sheet</a>
+                    <button id="downloadOrdersCsv" class="primary-btn" type="button">Download CSV</button>
+                  </div>
+                </div>
                 <div id="ordersList" class="orders-list" aria-live="polite"></div>
               </section>
             </div>

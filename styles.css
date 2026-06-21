@@ -991,6 +991,19 @@ textarea {
   letter-spacing: -0.03em;
 }
 
+.order-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.order-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1263,11 +1276,42 @@ td {
   font-weight: 600;
   font-size: 13px;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .proof-preview:hover {
   background: var(--brand);
   color: #fff;
+}
+
+.proof-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--brand);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.proof-card img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proof-actions .proof-preview {
+  flex: 1 1 150px;
 }
 
 .hidden {
@@ -1295,8 +1339,18 @@ td {
   .dashboard-grid,
   .checkout-grid,
   .admin-layout,
+  .order-heading,
   .management-grid {
     grid-template-columns: 1fr;
+  }
+
+  .order-tools {
+    justify-content: stretch;
+  }
+
+  .order-tools .ghost-btn,
+  .order-tools .primary-btn {
+    flex: 1 1 180px;
   }
 
   .admin-shell {

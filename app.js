@@ -5,6 +5,9 @@ const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_BYTES = 1.5 * 1024 * 1024;
 const STORAGE_WARNING =
   "Browser storage is full. Use a smaller image or remove older orders before trying again.";
+const DELIVERY_POINT_ADDRESS = "BgBazaar Office";
+const ORDERS_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1MqYYu7vkNXSjGTFE1egKOTeBQqCN4TTicZQvxP2wBv8/edit?usp=drivesdk";
 const DEFAULT_LOGO =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%230066cc'/%3E%3Ctext x='48' y='38' text-anchor='middle' font-family='Arial' font-size='22' font-weight='700' fill='white'%3EBG%3C/text%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial' font-size='17' font-weight='700' fill='white'%3EBazaar%3C/text%3E%3C/svg%3E";
 const DEFAULT_IMAGE =
@@ -151,7 +154,7 @@ function migrateOrders(savedOrders) {
       buyerName: order.buyerName || "Unknown buyer",
       mobileNumber: order.mobileNumber || order.phone || "",
       emailAddress: order.emailAddress || order.email || "",
-      deliveryLocation: order.deliveryLocation || order.address || "",
+      deliveryLocation: order.deliveryLocation || order.address || DELIVERY_POINT_ADDRESS,
       notes: order.notes || "",
       totalAmount: Number(order.totalAmount ?? order.total ?? 0),
       status: order.status || "Payment Submitted",
@@ -227,6 +230,135 @@ function acceptedProofFile(file) {
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
   const extAllowed = /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
   return allowed.includes(file.type) || extAllowed;
+}
+
+function isImageProof(order) {
+  return (
+    (order.paymentProofType || "").startsWith("image/") ||
+    /^data:image\//i.test(order.paymentProofData || "")
+  );
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function buildOrdersCsv() {
+  const headers = [
+    "Order Number",
+    "Created At",
+    "Buyer Name",
+    "Mobile Number",
+    "Email Address",
+    "Delivery Point Address",
+    "Items",
+    "Total Amount",
+    "Order Status",
+    "Payment Status",
+    "Payment Proof File",
+    "Payment Submitted At"
+  ];
+  const rows = orders.map((order) => [
+    order.orderNumber,
+    new Date(order.createdAt).toLocaleString("en-IN"),
+    order.buyerName,
+    order.mobileNumber,
+    order.emailAddress,
+    order.deliveryLocation || DELIVERY_POINT_ADDRESS,
+    order.items
+      .map((item) => `${item.name} x ${item.quantity} @ ${money(item.unitPrice)}`)
+      .join("; "),
+    orderTotal(order),
+    order.status,
+    order.paymentVerificationStatus,
+    order.paymentProofName,
+    order.paymentSubmittedAt ? new Date(order.paymentSubmittedAt).toLocaleString("en-IN") : ""
+  ]);
+  return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+function downloadOrdersCsv() {
+  if (!orders.length) {
+    alert("No orders available to export.");
+    return;
+  }
+  const blob = new Blob([buildOrdersCsv()], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `bgbazaar-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function openPaymentProof(orderId) {
+  const order = orders.find((item) => item.id === orderId);
+  if (!order || !order.paymentProofData || order.paymentProofData === "#") {
+    alert("No payment proof is available for this order.");
+    return;
+  }
+
+  const preview = window.open("", "_blank");
+  if (!preview) {
+    alert("Please allow pop-ups to open the payment proof preview.");
+    return;
+  }
+
+  const safeTitle = escapeHtml(`Payment Proof - ${order.orderNumber}`);
+  const proofMarkup = isImageProof(order)
+    ? `<img src="${escapeHtml(order.paymentProofData)}" alt="${safeTitle}">`
+    : `<iframe src="${escapeHtml(order.paymentProofData)}" title="${safeTitle}"></iframe>`;
+
+  preview.document.write(`
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>${safeTitle}</title>
+        <style>
+          body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: #0f172a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+          }
+          main {
+            width: min(100% - 32px, 1100px);
+            display: grid;
+            gap: 16px;
+            padding: 24px 0;
+          }
+          h1 {
+            margin: 0;
+            font-size: 22px;
+          }
+          img,
+          iframe {
+            width: 100%;
+            height: min(82vh, 820px);
+            object-fit: contain;
+            border: 0;
+            border-radius: 14px;
+            background: #fff;
+          }
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>${safeTitle}</h1>
+          ${proofMarkup}
+        </main>
+      </body>
+    </html>
+  `);
+  preview.document.close();
 }
 
 function renderShared() {
@@ -568,6 +700,8 @@ function renderRevenueTable() {
 function renderOrders() {
   const ordersList = $("#ordersList");
   if (!ordersList || !isAdminLoggedIn) return;
+  const sheetLink = $("#ordersSheetLink");
+  if (sheetLink) sheetLink.href = ORDERS_SHEET_URL;
 
   ordersList.innerHTML = orders.length
     ? orders
@@ -575,6 +709,22 @@ function renderOrders() {
         .reverse()
         .map((order) => {
           const proofLabel = order.paymentProofType === "application/pdf" ? "Open PDF proof" : "Open screenshot";
+          const hasProofData = order.paymentProofData && order.paymentProofData !== "#";
+          const downloadName = escapeHtml(order.paymentProofName || `${order.orderNumber}-payment-proof`);
+          const proofPreview = !hasProofData
+            ? `<p class="muted">No payment proof uploaded.</p>`
+            : isImageProof(order)
+            ? `<div class="proof-card">
+                <img src="${escapeHtml(order.paymentProofData)}" alt="Payment proof for ${escapeHtml(order.orderNumber)}">
+                <div class="proof-actions">
+                  <button class="proof-preview" type="button" data-proof-open="${escapeHtml(order.id)}">Open screenshot</button>
+                  <a class="proof-preview" href="${escapeHtml(order.paymentProofData)}" download="${downloadName}">Download proof</a>
+                </div>
+              </div>`
+            : `<div class="proof-actions">
+                <button class="proof-preview" type="button" data-proof-open="${escapeHtml(order.id)}">${proofLabel}</button>
+                <a class="proof-preview" href="${escapeHtml(order.paymentProofData)}" download="${downloadName}">Download proof</a>
+              </div>`;
           return `
           <article class="order-item">
             <div class="order-actions">
@@ -589,14 +739,12 @@ function renderOrders() {
                 <p><strong>Buyer:</strong> ${escapeHtml(order.buyerName)}</p>
                 <p><strong>Mobile:</strong> ${escapeHtml(order.mobileNumber)}</p>
                 <p><strong>Email:</strong> ${escapeHtml(order.emailAddress)}</p>
-                <p><strong>Location:</strong> ${escapeHtml(order.deliveryLocation)}</p>
-                <p><strong>Notes:</strong> ${escapeHtml(order.notes || "None")}</p>
+                <p><strong>Delivery Point Address:</strong> ${escapeHtml(order.deliveryLocation || DELIVERY_POINT_ADDRESS)}</p>
               </div>
               <div>
                 <p><strong>Total:</strong> ${money(orderTotal(order))}</p>
-                <p><strong>UTR:</strong> ${escapeHtml(order.utrNumber)}</p>
                 <p><strong>Payment:</strong> ${escapeHtml(order.paymentVerificationStatus)}</p>
-                <a class="proof-preview" href="${escapeHtml(order.paymentProofData)}" target="_blank" rel="noreferrer">${proofLabel}</a>
+                ${proofPreview}
               </div>
             </div>
             <p class="muted">${order.items
@@ -822,6 +970,13 @@ function attachEvents() {
     renderAll();
   });
 
+  $("#ordersList")?.addEventListener("click", (event) => {
+    const proofButton = event.target.closest("[data-proof-open]");
+    if (proofButton) openPaymentProof(proofButton.dataset.proofOpen);
+  });
+
+  $("#downloadOrdersCsv")?.addEventListener("click", downloadOrdersCsv);
+
   $("#productForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
     const productForm = event.currentTarget;
@@ -1017,8 +1172,8 @@ function attachEvents() {
         buyerName: form.get("buyerName").trim(),
         mobileNumber: form.get("phone").trim(),
         emailAddress: form.get("email").trim(),
-        deliveryLocation: form.get("location").trim(),
-        notes: form.get("notes").trim(),
+        deliveryLocation: form.get("location")?.trim() || DELIVERY_POINT_ADDRESS,
+        notes: "",
         totalAmount: cartTotal(),
         status: "Pending",
         createdAt: now,
@@ -1029,7 +1184,7 @@ function attachEvents() {
           unitPrice: row.product.price,
           subtotal: row.product.price * row.quantity
         })),
-        utrNumber: form.get("utrNumber").trim(),
+        utrNumber: "",
         paymentProofName: proof.name,
         paymentProofType: isPdf ? "application/pdf" : "image/jpeg",
         paymentProofData: proofData,
