@@ -493,7 +493,28 @@ function renderFilters() {
   categoryFilter.value = categoryNames.includes(previous) ? previous : "all";
 }
 
+function renderProductCategorySelect(preferredCategory = "") {
+  const categorySelect = $("#productCategorySelect");
+  if (!categorySelect) return;
+
+  const currentCategory = preferredCategory || categorySelect.value;
+  const categoryNames = categories.map((category) => category.name).sort();
+  const legacyOption =
+    currentCategory && !categoryNames.includes(currentCategory)
+      ? `<option value="${escapeHtml(currentCategory)}">${escapeHtml(currentCategory)} (Archived)</option>`
+      : "";
+
+  categorySelect.innerHTML =
+    `<option value="">${categoryNames.length ? "Select a category" : "Create a category first"}</option>` +
+    legacyOption +
+    categoryNames
+      .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+      .join("");
+  categorySelect.value = currentCategory;
+}
+
 function renderCategories() {
+  renderProductCategorySelect();
   const categoriesList = $("#categoriesList");
   if (!categoriesList || !isAdminLoggedIn) return;
 
@@ -934,6 +955,7 @@ function fillProductForm(id) {
   productForm.elements.id.value = item.id;
   productForm.elements.name.value = item.name;
   productForm.elements.description.value = item.description;
+  renderProductCategorySelect(item.category);
   productForm.elements.category.value = item.category;
   productForm.elements.image.value = item.image;
   productForm.elements.price.value = item.price;
