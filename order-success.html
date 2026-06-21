@@ -31,7 +31,7 @@
         <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Your order has been submitted successfully. Here are your order details and what happens next.</p>
       </section>
 
-      <section class="section">
+      <section class="section order-print-section">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Order Details</p>
@@ -39,7 +39,7 @@
           </div>
         </div>
 
-        <div id="orderSuccessContent" style="display: grid; gap: 24px;">
+        <div id="orderSuccessContent" class="order-success-card" style="display: grid; gap: 24px;">
           <div style="padding: 24px; background: var(--brand-light); border: 2px solid var(--brand); border-radius: 8px; text-align: center;">
             <p style="margin-top: 0; color: var(--brand); font-weight: 700; font-size: 14px;">ORDER REFERENCE NUMBER</p>
             <h3 id="successOrderNumber" style="margin: 8px 0 0; color: var(--brand); font-size: 24px; letter-spacing: 1px;">-</h3>
@@ -74,7 +74,7 @@
             </div>
           </div>
 
-          <div style="padding: 16px; background: #fffbeb; border-left: 4px solid var(--accent); border-radius: 4px;">
+          <div class="print-hide" style="padding: 16px; background: #fffbeb; border-left: 4px solid var(--accent); border-radius: 4px;">
             <h4 style="margin-top: 0; color: #92400e; font-size: 14px; font-weight: 700;">What Happens Next?</h4>
             <ol style="margin: 0; padding: 0 0 0 20px; color: #92400e; font-size: 14px; line-height: 1.8;">
               <li>Our admin will verify your payment proof</li>
@@ -84,7 +84,7 @@
             </ol>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <div class="print-hide" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
             <a class="primary-link" href="index.html" style="text-align: center;">Continue Shopping</a>
             <a class="secondary-link light" href="#" id="printOrderBtn" style="text-align: center;">Print Order</a>
           </div>

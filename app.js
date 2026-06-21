@@ -18,8 +18,6 @@ const ORDER_STATUSES = [
   "Delivered",
   "Cancelled"
 ];
-const PAYMENT_STATUSES = ["Pending", "Approved", "Rejected"];
-
 const initialCategories = [
   { id: crypto.randomUUID(), name: "Electronics", description: "Electronic devices and gadgets" },
   { id: crypto.randomUUID(), name: "Fashion", description: "Clothing and accessories" },
@@ -175,7 +173,6 @@ function migrateOrders(savedOrders) {
       paymentProofName: order.paymentProofName || "",
       paymentProofType: order.paymentProofType || "",
       paymentProofData: order.paymentProofData || "#",
-      paymentVerificationStatus: order.paymentVerificationStatus || "Pending",
       paymentSubmittedAt: order.paymentSubmittedAt || createdAt
     };
   });
@@ -225,8 +222,8 @@ function orderTotal(order) {
   return Number(order.totalAmount ?? order.total ?? 0);
 }
 
-function isApprovedDeliveredOrder(order) {
-  return order.status === "Delivered" && order.paymentVerificationStatus === "Approved";
+function isDeliveredOrder(order) {
+  return order.status === "Delivered";
 }
 
 function generateOrderNumber() {
@@ -269,7 +266,6 @@ function buildOrdersCsv() {
     "Items",
     "Total Amount",
     "Order Status",
-    "Payment Status",
     "Payment Proof File",
     "Payment Submitted At"
   ];
@@ -285,7 +281,6 @@ function buildOrdersCsv() {
       .join("; "),
     orderTotal(order),
     order.status,
-    order.paymentVerificationStatus,
     order.paymentProofName || proofFileName(order.orderNumber, order.paymentProofType),
     order.paymentSubmittedAt ? new Date(order.paymentSubmittedAt).toLocaleString("en-IN") : ""
   ]);
@@ -373,6 +368,91 @@ function openPaymentProof(orderId) {
     </html>
   `);
   preview.document.close();
+}
+
+function printOrderDetails(orderId) {
+  const order = orders.find((item) => item.id === orderId);
+  if (!order) {
+    alert("Order details are not available.");
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("Please allow pop-ups to print order details.");
+    return;
+  }
+
+  const items = order.items
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${item.quantity}</td>
+          <td>${money(item.unitPrice)}</td>
+          <td>${money(item.subtotal)}</td>
+        </tr>`
+    )
+    .join("");
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>${escapeHtml(order.orderNumber)} Order Details</title>
+        <style>
+          @page { size: A4; margin: 12mm; }
+          * { box-sizing: border-box; }
+          body { margin: 0; color: #0f172a; font: 12px/1.45 Arial, sans-serif; }
+          h1 { margin: 0 0 6px; font-size: 22px; }
+          h2 { margin: 14px 0 8px; font-size: 14px; }
+          p { margin: 3px 0; }
+          .header { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid #0066cc; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+          .card { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th, td { padding: 7px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+          th { color: #64748b; background: #f8fafc; font-size: 11px; text-transform: uppercase; }
+          .total { margin-top: 12px; color: #0066cc; text-align: right; font-size: 18px; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>BGBAZAAR Order Details</h1>
+            <p><strong>Order:</strong> ${escapeHtml(order.orderNumber)}</p>
+            <p><strong>Date:</strong> ${escapeHtml(new Date(order.createdAt).toLocaleString("en-IN"))}</p>
+          </div>
+          <div>
+            <p><strong>Status:</strong> ${escapeHtml(order.status)}</p>
+            <p><strong>Total:</strong> ${money(orderTotal(order))}</p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h2>Customer</h2>
+            <p><strong>Name:</strong> ${escapeHtml(order.buyerName)}</p>
+            <p><strong>Mobile:</strong> ${escapeHtml(order.mobileNumber)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(order.emailAddress)}</p>
+          </div>
+          <div class="card">
+            <h2>Delivery</h2>
+            <p><strong>Delivery Point Address:</strong></p>
+            <p>${escapeHtml(order.deliveryLocation || DELIVERY_POINT_ADDRESS)}</p>
+          </div>
+        </div>
+        <h2>Items</h2>
+        <table>
+          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+          <tbody>${items}</tbody>
+        </table>
+        <div class="total">Total: ${money(orderTotal(order))}</div>
+        <script>window.onload = () => window.print();</script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 function renderShared() {
@@ -625,8 +705,8 @@ function renderDashboard() {
   if (!totalProductsDash || !isAdminLoggedIn) return;
 
   const activeProducts = products.filter((item) => item.listed).length;
-  const completedOrders = orders.filter(isApprovedDeliveredOrder);
-  const pendingOrders = orders.filter((order) => !isApprovedDeliveredOrder(order) && order.status !== "Cancelled");
+  const completedOrders = orders.filter(isDeliveredOrder);
+  const pendingOrders = orders.filter((order) => !isDeliveredOrder(order) && order.status !== "Cancelled");
   const revenue = completedOrders.reduce((sum, order) => sum + orderTotal(order), 0);
 
   totalProductsDash.textContent = products.length;
@@ -686,7 +766,7 @@ function renderInventoryTable() {
 function sumRevenue(days) {
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
   return orders
-    .filter((order) => isApprovedDeliveredOrder(order) && new Date(order.createdAt).getTime() >= cutoff)
+    .filter((order) => isDeliveredOrder(order) && new Date(order.createdAt).getTime() >= cutoff)
     .reduce((sum, order) => sum + orderTotal(order), 0);
 }
 
@@ -694,7 +774,7 @@ function renderRevenueTable() {
   const revenueTable = $("#revenueTable");
   if (!revenueTable) return;
   const total = orders
-    .filter(isApprovedDeliveredOrder)
+    .filter(isDeliveredOrder)
     .reduce((sum, order) => sum + orderTotal(order), 0);
   revenueTable.innerHTML = `
     <table>
@@ -753,7 +833,6 @@ function renderOrders() {
               </div>
               <div>
                 <p><strong>Total:</strong> ${money(orderTotal(order))}</p>
-                <p><strong>Payment:</strong> ${escapeHtml(order.paymentVerificationStatus)}</p>
                 ${proofPreview}
               </div>
             </div>
@@ -770,15 +849,7 @@ function renderOrders() {
                   ).join("")}
                 </select>
               </label>
-              <label>
-                Payment verification
-                <select data-payment-status="${order.id}">
-                  ${PAYMENT_STATUSES.map(
-                    (status) =>
-                      `<option value="${status}" ${status === order.paymentVerificationStatus ? "selected" : ""}>${status}</option>`
-                  ).join("")}
-                </select>
-              </label>
+              <button class="ghost-btn" type="button" data-print-order="${escapeHtml(order.id)}">Print Order Details</button>
               <button class="danger-btn" type="button" data-delete-order="${escapeHtml(order.id)}">Delete Order</button>
             </div>
           </article>
@@ -966,16 +1037,9 @@ function attachEvents() {
 
   $("#ordersList")?.addEventListener("change", (event) => {
     const orderStatusId = event.target.dataset.orderStatus;
-    const paymentStatusId = event.target.dataset.paymentStatus;
     if (orderStatusId) {
       const order = orders.find((item) => item.id === orderStatusId);
       order.status = event.target.value;
-    }
-    if (paymentStatusId) {
-      const order = orders.find((item) => item.id === paymentStatusId);
-      order.paymentVerificationStatus = event.target.value;
-      if (event.target.value === "Rejected") order.status = "Pending Payment";
-      if (event.target.value === "Resubmission Requested") order.status = "Pending Payment";
     }
     renderAll();
   });
@@ -983,6 +1047,8 @@ function attachEvents() {
   $("#ordersList")?.addEventListener("click", (event) => {
     const proofButton = event.target.closest("[data-proof-open]");
     if (proofButton) openPaymentProof(proofButton.dataset.proofOpen);
+    const printButton = event.target.closest("[data-print-order]");
+    if (printButton) printOrderDetails(printButton.dataset.printOrder);
     const deleteButton = event.target.closest("[data-delete-order]");
     if (deleteButton && confirm("Delete this order from Order Management? Inventory counts will stay unchanged.")) {
       orders = orders.filter((order) => order.id !== deleteButton.dataset.deleteOrder);
@@ -1205,7 +1271,6 @@ function attachEvents() {
         paymentProofName: proofFileName(orderNumber, proofType),
         paymentProofType: proofType,
         paymentProofData: proofData,
-        paymentVerificationStatus: "Pending",
         paymentSubmittedAt: now
       };
 

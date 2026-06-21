@@ -2230,22 +2230,73 @@ td {
   }
 }
 
-/* Print styles for better mobile experience */
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
   .topbar,
   .hero-actions,
   .page-actions,
+  .page-hero,
+  .section-heading,
+  .print-hide,
   button,
   .admin-tabs {
-    display: none;
+    display: none !important;
   }
 
+  html,
   body {
-    background: white;
+    width: 100%;
+    background: #fff !important;
+    color: #0f172a;
+    font-size: 11px;
+  }
+
+  main {
+    width: 100%;
+    margin: 0;
   }
 
   .section {
+    margin: 0;
+    padding: 0;
+    border: 0;
     box-shadow: none;
     page-break-inside: avoid;
+  }
+
+  .order-success-card {
+    gap: 10px !important;
+  }
+
+  .order-success-card > * {
+    padding: 10px !important;
+    border-radius: 6px !important;
+    page-break-inside: avoid;
+  }
+
+  .order-success-card h3 {
+    font-size: 18px !important;
+  }
+
+  .order-success-card h4 {
+    margin-bottom: 5px !important;
+    font-size: 10px !important;
+  }
+
+  .order-success-card p {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  #successItems {
+    gap: 6px !important;
+  }
+
+  #successItems > div {
+    padding: 7px !important;
   }
 }
