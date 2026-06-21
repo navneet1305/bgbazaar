@@ -1,6 +1,6 @@
 import { db, ref, set, get, child, remove, onValue, update, push } from "./firebase.js";
 
-const ADMIN_EMAIL = "amaresh@bgbazaar.com";
+const ADMIN_USERNAME = "amaresh@bgbazaar.com";
 const ADMIN_PASSWORD = "amareshraj@1321";
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -1560,7 +1560,7 @@ function attachEvents() {
     const username = form.get("username").trim();
     const password = form.get("password").trim();
     
-    if (username === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       isAdminLoggedIn = true;
       sessionStorage.setItem("bgbazaar_admin", "true");
       event.currentTarget.reset();
@@ -1609,19 +1609,16 @@ function setupRealtimeListeners() {
   onValue(ref(db, "categories"), (snapshot) => {
     const data = snapshot.val();
     categories = data ? Object.values(data) : [];
-    save();
     renderAll();
   });
   onValue(ref(db, "products"), (snapshot) => {
     const data = snapshot.val();
     products = migrateProducts(data ? Object.values(data) : []);
-    save();
     renderAll();
   });
   onValue(ref(db, "settings"), (snapshot) => {
     if (snapshot.exists()) {
       settings = normalizeSettings(snapshot.val());
-      save();
       renderAll();
     }
   });
@@ -1629,7 +1626,6 @@ function setupRealtimeListeners() {
     const data = snapshot.val();
     if (data && isAdminLoggedIn) {
       orders = migrateOrders(Object.values(data));
-      save();
       renderAll();
     }
   });
