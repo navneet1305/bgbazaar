@@ -37,6 +37,11 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 button,
 input,
 textarea,
@@ -68,6 +73,10 @@ select {
   max-width: 100%;
 }
 
+.topbar > * {
+  min-width: 0;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -78,6 +87,13 @@ select {
   font-size: 18px;
   letter-spacing: -0.5px;
   flex: 0 0 auto;
+  min-width: 0;
+}
+
+.brand span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand img,
@@ -95,6 +111,7 @@ select {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .topbar a:not(.brand) {
@@ -106,6 +123,7 @@ select {
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .topbar a:not(.brand):hover {
@@ -424,6 +442,11 @@ select {
   transition: all 0.2s ease;
 }
 
+input[type="file"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 input:focus,
 textarea:focus,
 select:focus {
@@ -463,6 +486,7 @@ textarea {
   border-radius: var(--radius);
   background: #fff;
   transition: all 0.2s ease;
+  min-width: 0;
 }
 
 .product-card {
@@ -646,6 +670,12 @@ textarea {
   align-items: center;
 }
 
+.cart-item > *,
+.admin-item > *,
+.order-item > * {
+  min-width: 0;
+}
+
 .cart-controls,
 .admin-controls,
 .form-actions {
@@ -687,6 +717,7 @@ textarea {
   grid-template-columns: minmax(0, 1fr) 380px;
   gap: 28px;
   align-items: start;
+  min-width: 0;
 }
 
 .site-footer {
@@ -921,6 +952,7 @@ textarea {
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+  min-width: 0;
 }
 
 .admin-sidebar {
@@ -1002,6 +1034,11 @@ textarea {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.order-tools .ghost-btn,
+.order-tools .primary-btn {
+  white-space: nowrap;
 }
 
 .dashboard-grid {
@@ -1260,6 +1297,14 @@ td {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  min-width: 0;
+}
+
+.order-grid p,
+.mini-summary p,
+.cart-item p,
+.admin-item p {
+  overflow-wrap: anywhere;
 }
 
 .proof-preview {
@@ -1361,6 +1406,10 @@ td {
     position: static;
   }
 
+  .admin-content {
+    overflow: visible;
+  }
+
   .admin-content .admin-layout {
     grid-template-columns: 1fr;
   }
@@ -1396,6 +1445,10 @@ td {
     gap: 16px;
   }
 
+  .proof-card img {
+    max-height: 180px;
+  }
+
   .footer-grid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
@@ -1429,14 +1482,17 @@ td {
     width: 100%;
     justify-content: space-between;
     gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .topbar a:not(.brand) {
-    flex: 1;
-    min-width: 70px;
+    min-width: 0;
     padding: 8px 6px;
     font-size: 12px;
     text-align: center;
+    white-space: normal;
+    line-height: 1.2;
   }
 
   .section-heading {
@@ -1450,6 +1506,13 @@ td {
   .order-item {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .cart-controls,
+  .admin-controls,
+  .proof-actions,
+  .order-tools {
+    align-items: stretch;
   }
 
   .summary-band,
@@ -1574,6 +1637,8 @@ td {
   .admin-tabs a {
     padding: 9px 10px;
     font-size: 13px;
+    justify-content: center;
+    text-align: center;
   }
 
   .dashboard-grid {
@@ -1659,6 +1724,10 @@ td {
     padding: 8px 10px;
     font-size: 12px;
   }
+
+  .proof-actions .proof-preview {
+    flex: 1 1 100%;
+  }
 }
 
 /* Small tablets and large phones */
@@ -1691,11 +1760,7 @@ td {
   .topbar a:not(.brand) {
     padding: 6px 4px;
     font-size: 11px;
-    min-width: 50px;
-  }
-
-  .topbar a:not(.brand) span {
-    display: none;
+    min-width: 0;
   }
 
   .section {
@@ -1804,7 +1869,7 @@ td {
   }
 
   .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
@@ -1819,6 +1884,11 @@ td {
   .product-body {
     padding: 10px;
     gap: 6px;
+  }
+
+  .product-body .primary-btn {
+    min-height: 38px;
+    padding-inline: 8px;
   }
 
   .product-body h3 {
@@ -1939,6 +2009,12 @@ td {
   .admin-panel {
     border-radius: 14px;
     padding: 14px;
+  }
+
+  .order-tools .ghost-btn,
+  .order-tools .primary-btn {
+    flex-basis: 100%;
+    width: 100%;
   }
 
   .payment-panel {

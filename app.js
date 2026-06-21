@@ -1,5 +1,5 @@
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_USERNAME = "amaresh@bgbazaar.com";
+const ADMIN_PASSWORD = "amareshraj@1321";
 const LOW_STOCK_THRESHOLD = 5;
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_BYTES = 1.5 * 1024 * 1024;
@@ -244,6 +244,11 @@ function csvCell(value) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+function proofFileName(orderNumber, proofType) {
+  const extension = proofType === "application/pdf" ? "pdf" : "jpg";
+  return `${orderNumber}.${extension}`;
+}
+
 function buildOrdersCsv() {
   const headers = [
     "Order Number",
@@ -272,7 +277,7 @@ function buildOrdersCsv() {
     orderTotal(order),
     order.status,
     order.paymentVerificationStatus,
-    order.paymentProofName,
+    order.paymentProofName || proofFileName(order.orderNumber, order.paymentProofType),
     order.paymentSubmittedAt ? new Date(order.paymentSubmittedAt).toLocaleString("en-IN") : ""
   ]);
   return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
@@ -710,7 +715,7 @@ function renderOrders() {
         .map((order) => {
           const proofLabel = order.paymentProofType === "application/pdf" ? "Open PDF proof" : "Open screenshot";
           const hasProofData = order.paymentProofData && order.paymentProofData !== "#";
-          const downloadName = escapeHtml(order.paymentProofName || `${order.orderNumber}-payment-proof`);
+          const downloadName = escapeHtml(order.paymentProofName || proofFileName(order.orderNumber, order.paymentProofType));
           const proofPreview = !hasProofData
             ? `<p class="muted">No payment proof uploaded.</p>`
             : isImageProof(order)
@@ -1166,9 +1171,11 @@ function attachEvents() {
       const proofData = await prepareProofData(proof);
       const isPdf = proof.type === "application/pdf" || /\.pdf$/i.test(proof.name);
       const now = new Date().toISOString();
+      const orderNumber = generateOrderNumber();
+      const proofType = isPdf ? "application/pdf" : "image/jpeg";
       const order = {
         id: crypto.randomUUID(),
-        orderNumber: generateOrderNumber(),
+        orderNumber,
         buyerName: form.get("buyerName").trim(),
         mobileNumber: form.get("phone").trim(),
         emailAddress: form.get("email").trim(),
@@ -1185,8 +1192,8 @@ function attachEvents() {
           subtotal: row.product.price * row.quantity
         })),
         utrNumber: "",
-        paymentProofName: proof.name,
-        paymentProofType: isPdf ? "application/pdf" : "image/jpeg",
+        paymentProofName: proofFileName(orderNumber, proofType),
+        paymentProofType: proofType,
         paymentProofData: proofData,
         paymentVerificationStatus: "Pending",
         paymentSubmittedAt: now
