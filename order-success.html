@@ -107,6 +107,36 @@
         }
 
         const lastOrder = JSON.parse(orderData);
+        const SHEET_API =
+"https://script.google.com/macros/s/AKfycby-0RHPNyestWXs7x7noCYjtJaaZTnMvtT65OqdEaEgPKQ0UZwHniUf52Ztr24DViPPJg/exec";
+
+const alreadySent =
+localStorage.getItem(
+  "sheet_sent_" + lastOrder.orderNumber
+);
+
+if (!alreadySent) {
+  fetch(SHEET_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(lastOrder)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      localStorage.setItem(
+        "sheet_sent_" + lastOrder.orderNumber,
+        "true"
+      );
+      console.log("Order saved to Google Sheet");
+    }
+  })
+  .catch(err => {
+    console.error(err);
+  });
+}
         const orderTotal = Number(lastOrder.totalAmount || 0);
 
         document.getElementById('successOrderNumber').textContent = lastOrder.orderNumber || '-';
