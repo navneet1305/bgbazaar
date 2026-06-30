@@ -28,7 +28,7 @@
       <section class="page-hero success-hero">
         <p class="eyebrow">Order Confirmation</p>
         <h1>Thank You for Your Order!</h1>
-        <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Your order has been submitted successfully. Please keep this confirmation for pickup from BGBAZAAR Office.</p>
+        <p class="page-hero-copy">Your order has been submitted successfully. <span class="mandatory-confirmation">Please keep this confirmation for pickup from BGBAZAAR Office.</span></p>
       </section>
 
       <section class="section order-print-section">
@@ -39,49 +39,49 @@
           </div>
         </div>
 
-        <div id="orderSuccessContent" class="order-success-card" style="display: grid; gap: 24px;">
-          <div style="padding: 24px; background: var(--brand-light); border: 2px solid var(--brand); border-radius: 8px; text-align: center;">
-            <p style="margin-top: 0; color: var(--brand); font-weight: 700; font-size: 14px;">ORDER REFERENCE NUMBER</p>
-            <h3 id="successOrderNumber" style="margin: 8px 0 0; color: var(--brand); font-size: 24px; letter-spacing: 1px;">-</h3>
+        <div id="orderSuccessContent" class="order-success-card">
+          <div class="order-reference">
+            <p>Order Reference Number</p>
+            <h3 id="successOrderNumber">-</h3>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <div style="padding: 16px; border: 1px solid var(--line); border-radius: 8px;">
-              <h4 style="margin-top: 0; color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 700;">Pickup Point</h4>
-              <p id="successAddress" style="margin: 0; line-height: 1.6;">-</p>
+          <div class="order-detail-grid">
+            <div class="order-detail-box">
+              <h4>Pickup Point</h4>
+              <p id="successAddress">-</p>
             </div>
-            <div style="padding: 16px; border: 1px solid var(--line); border-radius: 8px;">
-              <h4 style="margin-top: 0; color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 700;">Contact Information</h4>
-              <p style="margin: 0 0 8px 0; font-size: 14px;"><strong id="successName">-</strong></p>
-              <p style="margin: 0; font-size: 14px;" id="successMobile">-</p>
-              <p style="margin: 0; font-size: 14px;" id="successEmail">-</p>
+            <div class="order-detail-box">
+              <h4>Contact Us</h4>
+              <p><strong id="successName">-</strong></p>
+              <p id="successMobile">-</p>
+              <p id="successEmail">-</p>
             </div>
           </div>
 
-          <div style="padding: 16px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;">
-            <h4 style="margin-top: 0; color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 700;">Order Items</h4>
-            <div id="successItems" style="display: grid; gap: 12px;"></div>
+          <div class="order-items-box">
+            <h4>Order Items</h4>
+            <div id="successItems" class="success-items"></div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;">
+          <div class="order-total-grid">
             <div>
-              <p style="margin: 0; color: var(--muted); font-size: 13px;">Order Total</p>
-              <p id="successTotal" style="margin: 8px 0 0 0; font-size: 24px; color: var(--brand); font-weight: 700;">-</p>
+              <p>Order Total</p>
+              <strong id="successTotal">-</strong>
             </div>
             <div>
-              <p style="margin: 0; color: var(--muted); font-size: 13px;">Transaction ID / UTR</p>
-              <p id="successUtr" style="margin: 8px 0 0 0; font-size: 18px; font-weight: 700;">-</p>
+              <p>Transaction ID / UTR</p>
+              <strong id="successUtr">-</strong>
             </div>
           </div>
 
           <div class="print-hide support-card">
             <h4>Need Help?</h4>
-            <p>Contact us: <a href="tel:9117138483">9117138483</a> or <a href="mailto:amaresh.r2030i@iimbg.ac.in">amaresh.r2030i@iimbg.ac.in</a></p>
+            <p>Contact us: Amaresh Raj, <a href="tel:9117138483">9117138483</a> or <a href="mailto:amaresh.r2030i@iimbg.ac.in">amaresh.r2030i@iimbg.ac.in</a></p>
           </div>
 
-          <div class="print-hide" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-            <a class="primary-link" href="index.html" style="text-align: center;">Continue Shopping</a>
-            <a class="secondary-link light" href="#" id="printOrderBtn" style="text-align: center;">Print Order</a>
+          <div class="print-hide order-success-actions">
+            <a class="primary-link" href="index.html">Continue Shopping</a>
+            <a class="secondary-link light" href="#" id="printOrderBtn">Print Order</a>
           </div>
         </div>
       </section>
@@ -110,21 +110,21 @@
         const orderTotal = Number(lastOrder.totalAmount || 0);
 
         document.getElementById('successOrderNumber').textContent = lastOrder.orderNumber || '-';
-        document.getElementById('successName').textContent = lastOrder.buyerName || '-';
-        document.getElementById('successMobile').textContent = lastOrder.mobileNumber ? 'Mobile: ' + lastOrder.mobileNumber : '-';
-        document.getElementById('successEmail').textContent = lastOrder.emailAddress ? 'Email: ' + lastOrder.emailAddress : '-';
+        document.getElementById('successName').textContent = 'Amaresh Raj';
+        document.getElementById('successMobile').textContent = 'Mobile: 9117138483';
+        document.getElementById('successEmail').textContent = 'Email: amaresh.r2030i@iimbg.ac.in';
         document.getElementById('successAddress').textContent = lastOrder.deliveryLocation || 'BgBazaar Office';
         document.getElementById('successTotal').textContent = money(orderTotal);
         document.getElementById('successUtr').textContent = lastOrder.utrNumber || '-';
 
         const itemsHtml = (lastOrder.items || []).map(item => {
           return `
-          <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px; background: #fff; border-radius: 6px;">
+          <div class="success-item-row">
             <div>
-              <p style="margin: 0; font-weight: 600;">${escapeHtml(item.name)}</p>
-              <p style="margin: 4px 0 0; color: var(--muted); font-size: 13px;">Qty: ${item.quantity} × ${money(item.unitPrice)}</p>
+              <p>${escapeHtml(item.name)}</p>
+              <span>Qty: ${item.quantity} × ${money(item.unitPrice)}</span>
             </div>
-            <p style="margin: 0; font-weight: 700; color: var(--brand);">${money(item.subtotal || (item.unitPrice * item.quantity))}</p>
+            <strong>${money(item.subtotal || (item.unitPrice * item.quantity))}</strong>
           </div>
           `;
         }).join('');

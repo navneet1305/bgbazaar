@@ -30,6 +30,7 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     stock_quantity INT DEFAULT 0,
     sold_quantity INT DEFAULT 0,
+    show_public_quantity BOOLEAN DEFAULT FALSE,
     description TEXT,
     image_url VARCHAR(500),
     is_listed BOOLEAN DEFAULT 1,

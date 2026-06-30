@@ -28,69 +28,12 @@
        <section class="page-hero pickup-hero">
          <p class="eyebrow">Campus Checkout</p>
          <h1>Complete Your Order</h1>
-         <p style="max-width: 600px; font-size: 15px; line-height: 1.6; opacity: 0.95; margin-top: 8px;">Complete your payment securely and collect your order from BGBAZAAR Office.</p>
+         <p class="page-hero-copy">Complete your payment securely and collect your order from BGBAZAAR Office.</p>
        </section>
 
         <section class="section checkout-grid">
           <div>
             <div class="section-heading">
-              <div>
-                <p class="eyebrow">Account</p>
-                <h2>User Login Required</h2>
-              </div>
-            </div>
-            <div id="userLoginSection">
-              <form id="userLoginForm" class="form-stack">
-                <label>
-                  Email
-                  <input name="userEmail" type="email" autocomplete="email" required>
-                </label>
-                <label>
-                  Password
-                  <input name="userPassword" type="password" autocomplete="current-password" required>
-                </label>
-                <div style="display: flex; gap: 12px;">
-                  <button class="primary-btn" type="submit">Login</button>
-                  <button class="ghost-btn" type="button" id="showRegisterForm">Register New</button>
-                </div>
-                <p id="userLoginMessage" class="message" role="status"></p>
-              </form>
-              <form id="userRegisterForm" class="form-stack hidden">
-                <label>
-                  Full Name
-                  <input name="registerName" type="text" autocomplete="name" required>
-                </label>
-                <label>
-                  Mobile Number
-                  <input name="registerPhone" type="tel" autocomplete="tel" pattern="[0-9+\-\s]{8,15}" required>
-                </label>
-                <label>
-                  Address
-                  <input name="registerAddress" type="text" required>
-                </label>
-                <label>
-                  Email
-                  <input name="registerEmail" type="email" autocomplete="email" required>
-                </label>
-                <label>
-                  Password
-                  <input name="registerPassword" type="password" autocomplete="new-password" required>
-                </label>
-                <div style="display: flex; gap: 12px;">
-                  <button class="primary-btn" type="submit">Register</button>
-                  <button class="ghost-btn" type="button" id="showLoginForm">Back to Login</button>
-                </div>
-                <p id="userRegisterMessage" class="message" role="status"></p>
-              </form>
-            </div>
-            <div id="userLoggedInSection" class="hidden">
-              <div style="padding: 16px; background: var(--brand-light); border-radius: 8px; margin-bottom: 20px;">
-                <p style="margin: 0;">Logged in as: <strong id="loggedInUserEmail">-</strong></p>
-                <button class="ghost-btn" type="button" id="userLogoutBtn" style="margin-top: 8px; padding: 4px 8px; font-size: 12px;">Logout</button>
-              </div>
-            </div>
-
-            <div class="section-heading" style="margin-top: 30px;">
               <div>
                 <p class="eyebrow">Pickup Information</p>
                 <h2>Your Details</h2>
@@ -112,7 +55,7 @@
               </label>
               <label>
                 Delivery Point Address
-                <input name="location" type="text" placeholder="Enter your delivery address">
+                <input id="location" name="location" type="text" value="BGBAZAAR Office" readonly aria-readonly="true">
               </label>
               <label>
                 Transaction ID / UTR
@@ -127,15 +70,6 @@
             </form>
             <p id="checkoutMessage" class="message" role="status"></p>
 
-            <div id="userOrderHistory" class="hidden" style="margin-top: 30px;">
-              <div class="section-heading">
-                <div>
-                  <p class="eyebrow">Order History</p>
-                  <h2>Your Past Orders</h2>
-                </div>
-              </div>
-              <div id="userOrdersList" style="display: grid; gap: 12px;"></div>
-            </div>
           </div>
 
          <aside class="payment-panel" aria-label="Payment information">
@@ -144,12 +78,18 @@
              <span>Order Total</span>
              <strong id="paymentAmount">Rs. 0</strong>
            </div>
-           <div class="payment-box">
-             <p>Scan to Pay</p>
-             <img id="upiQr" alt="Payment QR code">
-             <strong id="upiLabel">payments@bgbazaar</strong>
+           <div class="payment-options">
+             <div class="payment-box">
+               <p>Scan to Pay</p>
+               <img id="upiQr" alt="Payment QR code">
+               <strong id="upiLabel">payments@bgbazaar</strong>
+             </div>
+             <div id="secondaryPaymentBox" class="payment-box hidden">
+               <p>Alternate QR</p>
+               <img id="secondaryUpiQr" alt="Alternate payment QR code">
+               <strong id="secondaryUpiLabel"></strong>
+             </div>
            </div>
-           <div id="bankDetailsBox" class="bank-details"></div>
            <a class="secondary-link light full-link" href="cart.html">Edit Cart</a>
          </aside>
        </section>

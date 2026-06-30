@@ -118,10 +118,14 @@ select {
 }
 
 .topbar a:not(.brand) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--ink);
   text-decoration: none;
   border: 1px solid var(--line);
   border-radius: 999px;
+  min-height: 40px;
   padding: 8px 14px;
   font-size: 14px;
   font-weight: 600;
@@ -279,6 +283,14 @@ img {
   font-weight: 700;
 }
 
+.page-hero-copy {
+  max-width: 600px;
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  opacity: 1;
+}
+
 .eyebrow {
   margin: 0;
   color: inherit;
@@ -395,6 +407,11 @@ img {
   background:
     radial-gradient(circle at 86% 20%, rgba(245, 154, 26, 0.36), transparent 18rem),
     linear-gradient(135deg, #057987, #0d4650) !important;
+}
+
+.mandatory-confirmation {
+  color: #ff2b2b !important;
+  font-weight: 800;
 }
 
 .shop-intro p:last-child {
@@ -569,7 +586,10 @@ textarea {
 }
 
 .product-meta {
+  display: grid;
+  gap: 8px;
   align-items: flex-start;
+  justify-content: stretch;
 }
 
 .muted {
@@ -700,11 +720,23 @@ textarea {
 
 .cart-controls,
 .admin-controls,
-.form-actions {
+.form-actions,
+.product-quantity-controls {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.product-quantity-controls {
+  justify-content: center;
+  min-height: 44px;
+}
+
+.product-quantity-controls strong {
+  min-width: 32px;
+  text-align: center;
+  font-size: 20px;
 }
 
 .qty-btn {
@@ -722,6 +754,11 @@ textarea {
   border-color: var(--brand);
   background: var(--brand-light);
   color: var(--brand);
+}
+
+.qty-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .cart-total {
@@ -857,6 +894,11 @@ textarea {
   margin-bottom: 16px;
 }
 
+.payment-options {
+  display: grid;
+  gap: 14px;
+}
+
 .payment-box p {
   margin: 0;
   font-weight: 700;
@@ -870,26 +912,12 @@ textarea {
   border-radius: 6px;
 }
 
-.bank-details,
 .qr-preview-box {
   margin-top: 14px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-}
-
-.bank-details h4 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.bank-details p {
-  margin-bottom: 0;
-  color: var(--muted);
-  line-height: 1.6;
-  font-size: 13px;
 }
 
 .qr-preview-box {
@@ -1095,12 +1123,25 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: flex-end;
   gap: 10px;
 }
 
 .order-tools .ghost-btn,
 .order-tools .primary-btn {
   white-space: nowrap;
+}
+
+.order-search {
+  display: grid;
+  gap: 6px;
+  min-width: min(360px, 100%);
+}
+
+.order-search span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .dashboard-grid {
@@ -1415,6 +1456,15 @@ td {
   margin: 0;
 }
 
+.proof-image-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .proof-card img {
   width: 100%;
   max-height: 220px;
@@ -1433,6 +1483,134 @@ td {
 
 .proof-actions .proof-preview {
   flex: 1 1 150px;
+}
+
+.order-success-card {
+  display: grid;
+  gap: 24px;
+}
+
+.order-reference {
+  padding: 24px;
+  border: 2px solid var(--brand);
+  border-radius: 8px;
+  background: var(--brand-light);
+  text-align: center;
+}
+
+.order-reference p {
+  margin: 0;
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-reference h3 {
+  margin: 8px 0 0;
+  color: var(--brand);
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.order-detail-grid,
+.order-total-grid,
+.order-success-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.order-detail-box,
+.order-items-box,
+.order-total-grid {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.order-detail-box,
+.order-items-box {
+  padding: 16px;
+}
+
+.order-items-box,
+.order-total-grid {
+  background: var(--bg);
+}
+
+.order-detail-box h4,
+.order-items-box h4 {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-detail-box p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.order-detail-box p + p {
+  margin-top: 4px;
+}
+
+.success-items {
+  display: grid;
+  gap: 12px;
+}
+
+.success-item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.success-item-row p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.success-item-row span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.success-item-row strong {
+  color: var(--brand);
+  overflow-wrap: anywhere;
+}
+
+.order-total-grid {
+  padding: 20px;
+}
+
+.order-total-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.order-total-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--brand);
+  font-size: 22px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.order-success-actions .primary-link,
+.order-success-actions .secondary-link {
+  text-align: center;
 }
 
 .hidden {
@@ -1467,6 +1645,10 @@ td {
 
   .order-tools {
     justify-content: stretch;
+  }
+
+  .order-search {
+    flex: 1 1 100%;
   }
 
   .order-tools .ghost-btn,
@@ -1564,6 +1746,7 @@ td {
 
   .topbar a:not(.brand) {
     min-width: 0;
+    min-height: 40px;
     padding: 8px 6px;
     font-size: 12px;
     text-align: center;
@@ -1834,7 +2017,8 @@ td {
   }
 
   .topbar a:not(.brand) {
-    padding: 6px 4px;
+    min-height: 40px;
+    padding: 7px 4px;
     font-size: 11px;
     min-width: 0;
   }
@@ -2037,6 +2221,28 @@ td {
   .order-item {
     padding: 12px;
     gap: 10px;
+  }
+
+  .order-success-card {
+    gap: 16px;
+  }
+
+  .order-detail-grid,
+  .order-total-grid,
+  .order-success-actions,
+  .success-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .order-reference,
+  .order-detail-box,
+  .order-items-box,
+  .order-total-grid {
+    padding: 14px;
+  }
+
+  .order-total-grid strong {
+    font-size: 20px;
   }
 
   .cart-total {
@@ -2245,7 +2451,8 @@ td {
 /* Small phones */
 @media (max-width: 360px) {
   .topbar a:not(.brand) {
-    padding: 5px 3px;
+    min-height: 40px;
+    padding: 6px 3px;
     font-size: 10px;
   }
 

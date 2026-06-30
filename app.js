@@ -8,7 +8,7 @@ const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_BYTES = 1.5 * 1024 * 1024;
 const STORAGE_WARNING =
   "Browser storage is full. Use a smaller image or remove older orders before trying again.";
-const DELIVERY_POINT_ADDRESS = "BgBazaar Office";
+const DELIVERY_POINT_ADDRESS = "BGBAZAAR Office";
 const DEFAULT_LOGO = "assets/bg-bazaar-logo.jpeg";
 const DEFAULT_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='675' viewBox='0 0 900 675'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23099aac'/%3E%3Cstop offset='1' stop-color='%23f59a1a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='675' rx='42' fill='%23f8fbff'/%3E%3Ccircle cx='720' cy='90' r='180' fill='%23fff4df'/%3E%3Ccircle cx='135' cy='560' r='150' fill='%23e0f7fb'/%3E%3Crect x='142' y='160' width='616' height='356' rx='34' fill='url(%23bg)' opacity='0.14'/%3E%3Cpath d='M260 405h380' stroke='%23099aac' stroke-width='24' stroke-linecap='round'/%3E%3Cpath d='M300 330h300' stroke='%23f59a1a' stroke-width='24' stroke-linecap='round'/%3E%3Ctext x='450' y='270' text-anchor='middle' font-family='Avenir Next, Segoe UI, Arial, sans-serif' font-size='54' font-weight='800' fill='%23058a99'%3EBG BAZAAR%3C/text%3E%3Ctext x='450' y='465' text-anchor='middle' font-family='Avenir Next, Segoe UI, Arial, sans-serif' font-size='24' font-weight='700' letter-spacing='5' fill='%2364758b'%3ECAMPUS ESSENTIALS%3C/text%3E%3C/svg%3E";
@@ -39,6 +39,7 @@ const initialProducts = [
     totalStock: 18,
     soldQuantity: 0,
     listed: true,
+    showPublicQuantity: false,
     createdAt: new Date().toISOString()
   },
   {
@@ -51,6 +52,7 @@ const initialProducts = [
     totalStock: 25,
     soldQuantity: 0,
     listed: true,
+    showPublicQuantity: false,
     createdAt: new Date().toISOString()
   },
   {
@@ -63,6 +65,7 @@ const initialProducts = [
     totalStock: 12,
     soldQuantity: 0,
     listed: true,
+    showPublicQuantity: false,
     createdAt: new Date().toISOString()
   }
 ];
@@ -78,7 +81,8 @@ let settings = normalizeSettings(load("bgbazaar_settings", {
   contactEmail: "amaresh.r2030i@iimbg.ac.in",
   upiId: "payments@bgbazaar",
   qrImage: "",
-  bankDetails: "Bank details will appear here after admin setup."
+  secondaryUpiId: "",
+  secondaryQrImage: ""
 }));
 let isAdminLoggedIn = sessionStorage.getItem("bgbazaar_admin") === "true";
 let activeAdminPanel = "dashboardOverview";
@@ -312,7 +316,8 @@ function normalizeSettings(savedSettings) {
     contactEmail: legacyEmail ? "amaresh.r2030i@iimbg.ac.in" : savedSettings.contactEmail,
     upiId: savedSettings.upiId || "payments@bgbazaar",
     qrImage: savedSettings.qrImage || "",
-    bankDetails: savedSettings.bankDetails || "Bank details will appear here after admin setup."
+    secondaryUpiId: savedSettings.secondaryUpiId || "",
+    secondaryQrImage: savedSettings.secondaryQrImage || ""
   };
 }
 
@@ -331,6 +336,7 @@ function migrateProducts(savedProducts) {
       totalStock,
       soldQuantity: Math.min(soldQuantity, totalStock),
       listed: item.listed !== false,
+      showPublicQuantity: item.showPublicQuantity === true,
       createdAt: item.createdAt || new Date().toISOString()
     };
   });
@@ -683,12 +689,13 @@ function fillCheckoutForm() {
   const phoneInput = $("#phone");
   const emailInput = $("#email");
   const locationInput = $("#location");
+
+  if (locationInput) locationInput.value = DELIVERY_POINT_ADDRESS;
   
   if (isUserLoggedIn && userData) {
     if (buyerNameInput) buyerNameInput.value = userData.name || "";
     if (phoneInput) phoneInput.value = userData.phone || "";
     if (emailInput) emailInput.value = userData.email || "";
-    if (locationInput) locationInput.value = userData.address || "";
   }
 }
 
@@ -790,8 +797,18 @@ function renderShop() {
     ? visible
         .map((item) => {
           const remaining = remainingStock(item);
-          const status = stockStatus(item);
+          const cartQuantity = cart.find((cartItem) => cartItem.id === item.id)?.quantity || 0;
           const stockClass = remaining === 0 ? "out" : remaining <= LOW_STOCK_THRESHOLD ? "low" : "";
+          const publicStock = item.showPublicQuantity
+            ? `<span class="stock ${stockClass}">Stock left: ${remaining}</span>`
+            : `<span class="stock ${stockClass}">${stockStatus(item)}</span>`;
+          const purchaseControl = cartQuantity
+            ? `<div class="product-quantity-controls" aria-label="${escapeHtml(item.name)} quantity in cart">
+                <button class="qty-btn" type="button" data-card-minus="${item.id}" aria-label="Remove one ${escapeHtml(item.name)}">-</button>
+                <strong>${cartQuantity}</strong>
+                <button class="qty-btn" type="button" data-card-plus="${item.id}" ${cartQuantity >= remaining ? "disabled" : ""} aria-label="Add one ${escapeHtml(item.name)}">+</button>
+              </div>`
+            : `<button class="primary-btn" type="button" data-add="${item.id}" ${remaining === 0 ? "disabled" : ""}>Add to cart</button>`;
           return `
           <article class="product-card">
             <img src="${escapeHtml(item.image || DEFAULT_IMAGE)}" alt="${escapeHtml(item.name)}">
@@ -803,9 +820,9 @@ function renderShop() {
               <p class="muted">${escapeHtml(item.description)}</p>
               <div class="product-meta">
                 <span class="price">${money(item.price)}</span>
-                <span class="stock ${stockClass}">${status}: ${remaining} left</span>
+                ${publicStock}
               </div>
-              <button class="primary-btn" type="button" data-add="${item.id}" ${remaining === 0 ? "disabled" : ""}>Add to cart</button>
+              ${purchaseControl}
             </div>
           </article>
         `;
@@ -864,16 +881,20 @@ function renderCart() {
 
   const upiQr = $("#upiQr");
   const upiLabel = $("#upiLabel");
-  const bankDetailsBox = $("#bankDetailsBox");
+  const secondaryPaymentBox = $("#secondaryPaymentBox");
+  const secondaryUpiQr = $("#secondaryUpiQr");
+  const secondaryUpiLabel = $("#secondaryUpiLabel");
   if (upiQr) {
     upiQr.src = settings.qrImage || DEFAULT_LOGO;
   }
   if (upiLabel) upiLabel.textContent = `${settings.upiId} - ${money(cartTotal())}`;
-  if (bankDetailsBox) {
-    bankDetailsBox.innerHTML = `
-      <h4>Bank details</h4>
-      <p>${escapeHtml(settings.bankDetails).replaceAll("\n", "<br>")}</p>
-    `;
+  if (secondaryPaymentBox) {
+    const hasSecondaryQr = Boolean(settings.secondaryQrImage);
+    secondaryPaymentBox.classList.toggle("hidden", !hasSecondaryQr);
+    if (secondaryUpiQr) secondaryUpiQr.src = settings.secondaryQrImage || DEFAULT_LOGO;
+    if (secondaryUpiLabel) {
+      secondaryUpiLabel.textContent = `${settings.secondaryUpiId || settings.upiId} - ${money(cartTotal())}`;
+    }
   }
   fillCheckoutForm();
 }
@@ -927,6 +948,7 @@ function renderAdmin() {
               <p class="muted">${escapeHtml(item.category)} - ${money(item.price)}</p>
               <p class="muted">Total ${item.totalStock}, sold ${item.soldQuantity}, remaining ${remaining}</p>
               <span class="status-pill ${item.listed ? "" : "hidden"}">${item.listed ? "Listed" : "Unlisted"}</span>
+              <span class="status-pill ${item.showPublicQuantity ? "" : "pending"}">${item.showPublicQuantity ? "Quantity Public" : "Quantity Hidden"}</span>
               <span class="status-pill ${remaining === 0 ? "cancelled" : remaining <= LOW_STOCK_THRESHOLD ? "pending" : ""}">${stockStatus(item)}</span>
             </div>
             <div class="admin-controls">
@@ -1033,9 +1055,25 @@ function renderRevenueTable() {
 function renderOrders() {
   const ordersList = $("#ordersList");
   if (!ordersList || !isAdminLoggedIn) return;
+  const query = ($("#orderSearchInput")?.value || "").trim().toLowerCase();
+  const visibleOrders = orders.filter((order) => {
+    if (!query) return true;
+    const searchable = [
+      order.orderNumber,
+      order.utrNumber,
+      order.emailAddress,
+      order.mobileNumber,
+      order.buyerName,
+      ...(order.items || []).map((item) => item.name)
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return searchable.includes(query);
+  });
 
-  ordersList.innerHTML = orders.length
-    ? orders
+  ordersList.innerHTML = visibleOrders.length
+    ? visibleOrders
         .slice()
         .reverse()
         .map((order) => {
@@ -1046,7 +1084,10 @@ function renderOrders() {
             ? `<p class="muted">No payment proof uploaded.</p>`
             : isImageProof(order)
             ? `<div class="proof-card">
-                <p class="muted">Payment screenshot uploaded. Use the actions below to view or download it.</p>
+                <p class="muted">Payment screenshot</p>
+                <button class="proof-image-button" type="button" data-proof-open="${escapeHtml(order.id)}" aria-label="Open payment screenshot">
+                  <img src="${escapeHtml(order.paymentProofData)}" alt="Payment proof screenshot for ${escapeHtml(order.orderNumber)}" loading="lazy">
+                </button>
                 <div class="proof-actions">
                   <button class="proof-preview" type="button" data-proof-open="${escapeHtml(order.id)}">Open screenshot</button>
                   <a class="proof-preview" href="${escapeHtml(order.paymentProofData)}" download="${downloadName}">Download proof</a>
@@ -1098,7 +1139,7 @@ function renderOrders() {
         `;
         })
         .join("")
-    : `<div class="empty">No orders have been submitted.</div>`;
+    : `<div class="empty">${orders.length ? "No orders match your search." : "No orders have been submitted."}</div>`;
 }
 
 function renderBrandingForm() {
@@ -1115,9 +1156,11 @@ function renderBrandingForm() {
   
   if (settingsForm) {
     settingsForm.elements.upiId.value = settings.upiId;
-    settingsForm.elements.bankDetails.value = settings.bankDetails;
+    settingsForm.elements.secondaryUpiId.value = settings.secondaryUpiId || "";
     const preview = $("#adminQrPreview");
     if (preview) preview.src = settings.qrImage || DEFAULT_LOGO;
+    const secondaryPreview = $("#adminSecondaryQrPreview");
+    if (secondaryPreview) secondaryPreview.src = settings.secondaryQrImage || DEFAULT_LOGO;
   }
 }
 
@@ -1209,6 +1252,7 @@ function fillProductForm(id) {
   productForm.elements.price.value = item.price;
   productForm.elements.totalStock.value = item.totalStock;
   productForm.elements.listed.checked = item.listed;
+  productForm.elements.showPublicQuantity.checked = item.showPublicQuantity === true;
   showAdminPanel("productSetup");
   productForm.elements.name.focus();
 }
@@ -1219,6 +1263,7 @@ function resetProductForm() {
   productForm.reset();
   productForm.elements.id.value = "";
   productForm.elements.listed.checked = true;
+  productForm.elements.showPublicQuantity.checked = false;
 }
 
 function fileToDataUrl(file) {
@@ -1285,7 +1330,11 @@ function attachEvents() {
 
   $("#productGrid")?.addEventListener("click", async (event) => {
     const id = event.target.dataset.add;
+    const cardPlus = event.target.dataset.cardPlus;
+    const cardMinus = event.target.dataset.cardMinus;
     if (id) await addToCart(id);
+    if (cardPlus) await changeCartQuantity(cardPlus, 1);
+    if (cardMinus) await changeCartQuantity(cardMinus, -1);
   });
 
   $("#cartList")?.addEventListener("click", async (event) => {
@@ -1393,6 +1442,7 @@ function attachEvents() {
       totalStock,
       soldQuantity,
       listed: form.get("listed") === "on",
+      showPublicQuantity: form.get("showPublicQuantity") === "on",
       createdAt: existing ? existing.createdAt : new Date().toISOString()
     };
 
@@ -1457,7 +1507,8 @@ function attachEvents() {
       contactEmail: form.get("contactEmail").trim() || "amaresh.r2030i@iimbg.ac.in",
       upiId: settings.upiId,
       qrImage: settings.qrImage,
-      bankDetails: settings.bankDetails
+      secondaryUpiId: settings.secondaryUpiId || "",
+      secondaryQrImage: settings.secondaryQrImage || ""
     };
     if (!save()) {
       settings = previousSettings;
@@ -1481,7 +1532,9 @@ function attachEvents() {
     const settingsForm = event.currentTarget;
     const form = new FormData(settingsForm);
     const qrFile = form.get("qrImage");
+    const secondaryQrFile = form.get("secondaryQrImage");
     let qrImage = settings.qrImage;
+    let secondaryQrImage = settings.secondaryQrImage || "";
     try {
       if (qrFile && qrFile.size > 0) {
         const isAllowedType = ["image/jpeg", "image/png", "image/webp"].includes(qrFile.type);
@@ -1491,6 +1544,14 @@ function attachEvents() {
         }
         qrImage = await optimizeImageFile(qrFile, 900, 0.84, "image/png");
       }
+      if (secondaryQrFile && secondaryQrFile.size > 0) {
+        const isAllowedType = ["image/jpeg", "image/png", "image/webp"].includes(secondaryQrFile.type);
+        const isAllowedExtension = /\.(jpe?g|png|webp)$/i.test(secondaryQrFile.name);
+        if (!isAllowedType && !isAllowedExtension) {
+          throw new Error("Upload alternate QR code as JPG, JPEG, PNG, or WebP.");
+        }
+        secondaryQrImage = await optimizeImageFile(secondaryQrFile, 900, 0.84, "image/png");
+      }
     } catch (error) {
       alert(error.message || "The payment QR image could not be uploaded.");
       return;
@@ -1498,7 +1559,8 @@ function attachEvents() {
     const previousSettings = { ...settings };
     settings.upiId = form.get("upiId").trim() || "payments@bgbazaar";
     settings.qrImage = qrImage;
-    settings.bankDetails = form.get("bankDetails").trim() || "Bank details will appear here after admin setup.";
+    settings.secondaryUpiId = form.get("secondaryUpiId").trim();
+    settings.secondaryQrImage = secondaryQrImage;
     if (!save()) {
       settings = previousSettings;
       alert(STORAGE_WARNING);
@@ -1508,6 +1570,7 @@ function attachEvents() {
       const savedSettings = await persistShared("saveSettings", settings);
       settings = normalizeSettings(savedSettings || settings);
       settingsForm.elements.qrImage.value = "";
+      settingsForm.elements.secondaryQrImage.value = "";
       alert("Payment settings updated successfully!");
       renderAll();
     } catch (error) {
@@ -1610,7 +1673,7 @@ function attachEvents() {
         buyerName: form.get("buyerName").trim(),
         mobileNumber: form.get("phone").trim(),
         emailAddress: form.get("email").trim(),
-        deliveryLocation: form.get("location")?.trim() || DELIVERY_POINT_ADDRESS,
+        deliveryLocation: DELIVERY_POINT_ADDRESS,
         notes: "",
         totalAmount: cartTotal(),
         status: "Pending",
@@ -1651,6 +1714,35 @@ function attachEvents() {
         save();
         throw new Error(STORAGE_WARNING);
       }
+
+      // --- GOOGLE SHEET SYNC START ---
+try {
+  const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxWj9qFOi8s_avwd1YNku81LVVing5-eBDCRHJJZqU9AYpi4tt_T1_-ZyhKTwIgsVWBVw/exec"; 
+
+  // 1. Convert your array items into a clean comma-separated list string
+  const itemsSummary = previousCart.map(item => {
+  // Look up the matching product details from the global products array using the ID
+  const matchedProduct = (typeof products !== 'undefined' ? products : []).find(p => p.id === item.id);
+  
+  const name = matchedProduct ? (matchedProduct.name || matchedProduct.title || "Item") : "Unknown Item";
+  const price = matchedProduct ? (matchedProduct.price || 0) : 0;
+  
+  return `${name} x ${item.quantity || 1} @ Rs. ${price}`;
+}).join("; ");
+
+  // 2. Generate a perfectly balanced CSV row matching your Sheet headers
+  const csvRow = `"${savedOrder.orderNumber}","${new Date().toLocaleString("en-IN")}","${savedOrder.buyerName || ""}","${savedOrder.mobileNumber || ""}","${savedOrder.emailAddress || ""}","${savedOrder.deliveryPointAddress || savedOrder.deliveryLocation || ""}","${itemsSummary}","${savedOrder.totalAmount || ""}","Pending","${savedOrder.utrNumber || ""}","${savedOrder.orderNumber}.jpg","${new Date().toLocaleString("en-IN")}"\n`;
+
+  fetch(GOOGLE_WEB_APP_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: csvRow
+  });
+  console.log("Sheet Sync Status: Success");
+} catch (sheetError) {
+  console.error("Google Sheet background sync failed:", sheetError);
+}
+// --- GOOGLE SHEET SYNC END ---
 
       paymentForm.reset();
       checkoutMessage.textContent = `Order ${savedOrder.orderNumber} submitted. Redirecting...`;
@@ -1821,6 +1913,8 @@ function attachEvents() {
       renderShop();
     });
   });
+
+  $("#orderSearchInput")?.addEventListener("input", renderOrders);
 }
 
 function setupRealtimeListeners() {
@@ -1860,6 +1954,7 @@ function setupRealtimeListeners() {
     if (data) {
       orders = migrateOrders(Object.values(data));
       renderAll();
+      Object.values(data).forEach(order => trackLiveOrder(order));
     }
   });
 }
@@ -1867,3 +1962,46 @@ function setupRealtimeListeners() {
 attachEvents();
 renderAll();
 setupRealtimeListeners();
+
+
+// =======================================================
+// UNIFIED GOOGLE SHEETS LIVE & BUTTON SYNC
+// =======================================================
+const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwV4Gq5YcUQ36IImmyPPZTNTMvA3F5Z7RVk9N0Te2LiDVYYE6DKsQAOu16xHM0o9YHWMQ/exec";
+
+// Helper to safely format data fields for the spreadsheet grid columns
+const cleanField = (val) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+
+function sendToGoogleSheets(csvText) {
+  fetch(GOOGLE_WEB_APP_URL, { method: "POST", body: csvText })
+    .then(r => r.text())
+    .then(msg => console.log("Sheet Sync Status:", msg))
+    .catch(err => console.error("Sheet Sync Error:", err));
+}
+
+// 1. LIVE TIME FUNCTION (Formats single orders into clean grid rows)
+let processedOrderKeys = new Set();
+
+function trackLiveOrder(orderData) {
+  const orderKey = `${orderData.orderNo}_${orderData.status}`;
+  if (processedOrderKeys.has(orderKey)) return; // Prevents duplicate row spamming
+  processedOrderKeys.add(orderKey);
+
+  const csvLine = `${cleanField(orderData.orderNo)},${cleanField(orderData.createdAt)},${cleanField(orderData.buyerName || orderData.name)},${cleanField(orderData.mobile || orderData.phone)},${cleanField(orderData.email)},${cleanField(orderData.address || orderData.deliveryAddress)},${cleanField(orderData.items)},${cleanField(orderData.total || orderData.amount)},${cleanField(orderData.status)},${cleanField(orderData.utr || orderData.utrNumber)}\n`;
+  
+  sendToGoogleSheets(csvLine);
+}
+
+// 2. BUTTON INTERCEPTOR
+const originalClick = HTMLAnchorElement.prototype.click;
+HTMLAnchorElement.prototype.click = function() {
+  const href = this.href;
+  if (href && (href.startsWith('data:text/csv') || href.startsWith('blob:'))) {
+    if (href.startsWith('data:text/csv')) {
+      sendToGoogleSheets(decodeURIComponent(href.split(',')[1]));
+    } else if (href.startsWith('blob:')) {
+      fetch(href).then(r => r.text()).then(text => sendToGoogleSheets(text));
+    }
+  }
+  return originalClick.apply(this, arguments);
+};
